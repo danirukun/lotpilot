@@ -62,10 +62,15 @@ export function ChatPanel() {
   const [lastRequest, setLastRequest] = useState<AgentRequest | null>(null);
   const [deal, setDeal] = useState<ActiveDeal | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
   }, [turns, loading]);
+
+  const revealChat = () => {
+    chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const submit = (brief: string) => {
     const clean = brief.trim();
@@ -88,6 +93,7 @@ export function ChatPanel() {
     setTurns((t) => [...t, { role: "user", text: userText }]);
     setLastRequest(request);
     setLoading(true);
+    revealChat();
 
     try {
       const res = await fetch("/api/chat", {
@@ -98,6 +104,7 @@ export function ChatPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Agent error");
       setTurns((t) => [...t, { role: "agent", result: data as AgentResult }]);
+      revealChat();
       track("matches_returned", {
         source: data.source,
         count: data.matches?.length ?? 0
@@ -124,15 +131,16 @@ export function ChatPanel() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-      {/* Sidebar */}
-      <aside className="space-y-4">
+      {/* Sidebar — below chat on narrow viewports so results are not off-screen */}
+      <aside className="order-2 space-y-4 lg:order-1">
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Store personas</h2>
           <p className="mt-1 text-xs text-paper/55">One click to load a store brief.</p>
           <div className="mt-3 space-y-2">
             {PERSONAS.map((p) => (
-              <div key={p.id} className="relative">
+              <div key={p.id}>
                 <button
+                  type="button"
                   onClick={() => submit(p.brief)}
                   disabled={loading}
                   title={p.brief}
@@ -143,7 +151,6 @@ export function ChatPanel() {
                     <span className="block text-sm font-medium">{p.name}</span>
                     <span className="block text-xs text-paper/50">{p.location}</span>
                     <span className="mt-1 block text-xs leading-snug text-paper/70">{p.blurb}</span>
-                    {p.url && <span className="block h-4" aria-hidden />}
                   </span>
                 </button>
                 {p.url && (
@@ -151,7 +158,7 @@ export function ChatPanel() {
                     href={p.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="absolute bottom-2 left-12 text-[11px] text-brand-300 hover:underline"
+                    className="ml-11 mt-1 inline-block text-[11px] text-brand-300 hover:underline"
                   >
                     {new URL(p.url).hostname.replace(/^www\./, "")} ↗
                   </a>
@@ -183,8 +190,11 @@ export function ChatPanel() {
         />
       </aside>
 
-      {/* Conversation */}
-      <section className="card flex h-[80vh] min-h-[600px] flex-col overflow-hidden lg:sticky lg:top-20">
+      {/* Conversation — first on mobile so persona / send results are on screen */}
+      <section
+        ref={chatRef}
+        className="card order-1 flex h-[80vh] min-h-[600px] scroll-mt-20 flex-col overflow-hidden lg:sticky lg:top-20 lg:order-2"
+      >
         <div ref={feedRef} className="scroll-slim flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
           {!started && <EmptyState onPick={submit} />}
 
