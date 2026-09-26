@@ -38,7 +38,7 @@ export function parseRfq(dna: StoreDNA): Rfq {
     gradeLetters: letters,
     grades: lettersToGrades(letters),
     gradeMode: mode,
-    brands: parseBrands(text),
+    brands: [...new Set([...dna.brands, ...parseBrands(text)])],
     source: "deterministic"
   };
 }

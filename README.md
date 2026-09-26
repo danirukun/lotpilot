@@ -45,7 +45,7 @@ LotPilot acts as the retailer's procurement agent. It turns a plain-language bri
 - **Deal room.** A modal plays back each negotiation message, then shows the savings before checkout.
 - **Simulated checkout.** The server recomputes every negotiated price, so the client cannot set a price. The order shows lines, savings, shipping, total, and a delivery estimate.
 - **Optional LLM narration.** With an API key, a model writes the buyer's briefing. Ranking, policy, and numbers stay deterministic.
-- **UK wholesale index.** The agent matches store DNA to [The Wholesaler UK](https://www.thewholesaler.co.uk/) directory categories and, when keyed, runs a live Tavily search on that site. Leads show in the demo as external supplier links.
+- **UK wholesale RAG.** The agent searches a Supabase index of [The Wholesaler UK](https://www.thewholesaler.co.uk/) with hybrid RRF (full-text + trigram + embeddings). Without Supabase keys it falls back to the seeded index and optional Tavily.
 - **Offline-first.** No key is required for any step of the demo.
 
 ## Store feature extraction
@@ -54,9 +54,21 @@ The retailer can paste a store URL instead of a brief. The engine is in `src/lib
 
 Completed profiles are cached under `.cache/store-profiles/` (override with `STORE_CACHE_DIR`) for 24 hours (`STORE_CACHE_TTL_MS`). Cache hits replay the same analysis so demo runs stay deterministic and skip live fetch / Tavily / Places. Pass `{ refresh: true }` on `/api/store` or `/api/chat` to force a fresh read.
 
-## UK wholesale index research
+## UK wholesale RAG (Supabase)
 
-Each agent run also researches real UK wholesale directories. The seeded index maps store DNA to categories on [The Wholesaler UK](https://www.thewholesaler.co.uk/) (clothing, footwear, football, electronics, and more). When `TAVILY_API_KEY` is set, Tavily searches `thewholesaler.co.uk` and merges live hits. Results appear in the demo as **UK wholesale index** leads. Research caches under `.cache/wholesale-research/`.
+Each agent run researches real UK wholesale directories.
+
+1. **Supabase hybrid search** (when `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set; the key may be a publishable key). Postgres fuses full-text (`tsvector`), trigram (`pg_trgm`), and hashed keyword vector (`pgvector`) ranks with reciprocal rank fusion via `wholesale_hybrid_search`. Product alternatives use OR queries so full-text search contributes. Results are filtered by shop vertical and lexical evidence, then deduplicated by supplier name.
+2. **Seeded fallback.** Local `WHOLESALE_INDEX` categories still match when RAG is empty or unconfigured.
+3. **Optional Tavily.** Live `thewholesaler.co.uk` hits fill gaps when `TAVILY_API_KEY` is set.
+
+Project: [lmfvzuvhwvjpdfkoqqvc](https://supabase.com/dashboard/project/lmfvzuvhwvjpdfkoqqvc) (rename to LotPilot in the dashboard if the name still shows the previous app). Schema lives in `supabase/migrations/`. Re-crawl and upsert with `npm run ingest:wholesale`. Research caches under `.cache/wholesale-research/`.
+
+The current index uses `local-hash-v1`: deterministic keyword vectors, **not semantic embeddings**. Leave `WHOLESALE_EMBED_MODEL` unset. Other model settings use keyword-only retrieval, preventing incompatible query/index vectors. Semantic search needs model metadata and a complete re-ingestion implementation first.
+
+Chat streams actual processing stages using `Accept: application/x-ndjson`; callers without that header still get JSON. **Refresh sources** bypasses caches. Changing live-source configuration also invalidates supplier research caches, and a temporary live outage does not cache fallback results for the next request.
+
+Run `npm run verify:rag` for read-only production retrieval checks. Preview a crawl without writes using `npm run ingest:wholesale -- --dry-run --limit=2`; a write requires `SUPABASE_SERVICE_ROLE_KEY` on the server. Never enable public write policies for ingestion. See the [verified demo runbook and fixture audit](docs/demo-verification.md) for evidence, limitations and presentation steps.
 
 ### Sources
 
@@ -246,8 +258,9 @@ All environment variables are optional. The demo works with none of them. Placeh
 | `ANTHROPIC_MODEL` | Anthropic model name |
 | `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics |
 | `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host |
-| `COMMERCE_LAYER_CLIENT_ID` | Commerce Layer checkout |
-| `COMMERCE_LAYER_ENDPOINT` | Commerce Layer API base URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Wholesale directory project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public read key (publishable or legacy anon) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only crawler writes; never sent to the browser |
 | `TAVILY_API_KEY` | Tavily web research (keep in `.env.local` only) |
 | `GOOGLE_MAPS_API_KEY` | Google Places lookup for store URLs |
 
@@ -256,7 +269,7 @@ All environment variables are optional. The demo works with none of them. Placeh
 - **Analytics (optional).** Set `NEXT_PUBLIC_POSTHOG_KEY` to send events to PostHog. Without it, analytics is a no-op.
 - **Google Maps (optional).** Set `GOOGLE_MAPS_API_KEY` to find the store's Google Maps listing with the Places API (New) text search.
 - **Web research (optional).** Set `TAVILY_API_KEY` to search the web with Tavily. The engine uses the results as a Maps listing fallback and as extra text for the classifier. The request has a 7-second timeout. On any failure the engine continues without it. Keep the key in `.env.local` only. Do not commit it.
-- **Commerce Layer (optional).** Set `COMMERCE_LAYER_CLIENT_ID` and `COMMERCE_LAYER_ENDPOINT` to mark the order source as Commerce Layer. Without them, checkout returns a clean mock order with the same shape.
+- **Checkout.** Negotiation and checkout are always simulated. Commerce Layer is not integrated; setting credentials cannot make an order live.
 
 To use an LLM locally, copy the example file first:
 
@@ -325,4 +338,4 @@ Use this script for a live presentation. The sample lines are for the presenter 
 
 ## Deployment
 
-LotPilot is Vercel-ready. It is a standard Next.js App Router project. Import the repository into Vercel and deploy. No environment variables are required for the demo. Add the optional keys in the Vercel project settings to switch on live narration, analytics, or Commerce Layer.
+LotPilot is Vercel-ready. It is a standard Next.js App Router project. Import the repository into Vercel and deploy. No environment variables are required for the offline demo. Add the Supabase public configuration and optional provider keys in Vercel for live supplier retrieval, narration and research. Checkout remains simulated.

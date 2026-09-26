@@ -5,7 +5,8 @@ import type { WholesaleResearch } from "@/lib/wholesale/types";
 const MODE_LABEL: Record<WholesaleResearch["mode"], string> = {
   live: "Live search",
   index: "Directory index",
-  mixed: "Index + live"
+  mixed: "Index + live",
+  rag: "Live directory index"
 };
 
 export function WholesaleResearchCard({ research }: { research: WholesaleResearch }) {
@@ -15,8 +16,8 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
     <div className="card animate-fade-up overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 p-4 sm:p-5">
         <div className="min-w-0">
-          <span className="label-eyebrow">UK wholesale index</span>
-          <h3 className="mt-1 font-display text-xl">Suppliers beyond the seeded catalog</h3>
+          <span className="label-eyebrow">Supplier research</span>
+          <h3 className="mt-1 font-display text-xl">Where to source next</h3>
           <p className="mt-1 text-sm text-paper/65">
             Directory leads from{" "}
             <a
@@ -27,7 +28,7 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
             >
               thewholesaler.co.uk
             </a>
-            {research.mode !== "index" ? " plus live web research." : "."}
+            . Contact suppliers to confirm stock, grades and prices.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -40,8 +41,14 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
         </div>
       </div>
 
+      <p className="border-t border-ink-line/80 px-4 py-3 text-sm text-paper/80 sm:px-5">
+        {research.mode === "rag" ? "The directory search" : "Saved categories and web research"} found {research.leads.length} leads for your shop.
+        {" "}Start with {research.leads.slice(0, 2).map((lead, i) => (
+          <span key={lead.url}>{i > 0 ? " or " : ""}<a className="text-brand-300 hover:underline" href={lead.url} target="_blank" rel="noopener noreferrer">{lead.name} [{i + 1}]</a></span>
+        ))}.
+      </p>
       <ul className="divide-y divide-ink-line/80 border-t border-ink-line/80">
-        {research.leads.map((lead) => (
+        {research.leads.map((lead, index) => (
           <li key={lead.url} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-5">
             <div className="min-w-0">
               <a
@@ -50,16 +57,18 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
                 rel="noopener noreferrer"
                 className="font-semibold text-paper hover:text-brand-300"
               >
-                {lead.name} ↗
+                <span className="mr-2 text-xs text-paper/40">[{index + 1}]</span>{lead.name} ↗
               </a>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-paper/55">
                 <span className="chip py-0.5">{lead.category}</span>
+                {lead.kind && <span>{lead.kind === "supplier" ? "Supplier listing" : "Category directory"}</span>}
                 <span>{lead.why}</span>
               </div>
               {lead.snippet && <p className="mt-1 text-xs leading-relaxed text-paper/65">{lead.snippet}</p>}
+              {lead.retrievedAt && <p className="mt-1 text-[11px] text-paper/40">Indexed {new Date(lead.retrievedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}</p>}
             </div>
             <div className="shrink-0 text-xs font-semibold tabular-nums text-brand-300 sm:pt-1">
-              {lead.score}/100
+              #{index + 1}
             </div>
           </li>
         ))}
@@ -74,6 +83,7 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
             <li key={n}>· {n}</li>
           ))}
           <li className="text-paper/40">Query: {research.query}</li>
+          {research.model === "local-hash-v1" && <li>Retrieval combines full-text, fuzzy text and hashed keyword vectors. These vectors match words, not semantic meaning.</li>}
         </ul>
       </details>
     </div>

@@ -87,8 +87,7 @@ export function negotiateBasket(
 }
 
 /**
- * Create an order for a basket. With Commerce Layer keys this is where a real
- * cart would be built; without them we return a mock order of the same shape.
+ * Create a simulated order for a basket. No commerce API is connected.
  */
 export function createOrder(
   lotIds: string[],
@@ -119,10 +118,6 @@ export function createOrder(
       Math.max(0, ...accepted.map((d) => supplierByName(d.lot.wholesaler).leadTimeDays))
   );
 
-  const commerceLayerConfigured =
-    Boolean(process.env.COMMERCE_LAYER_CLIENT_ID) &&
-    Boolean(process.env.COMMERCE_LAYER_ENDPOINT);
-
   return {
     id: orderId(),
     lines,
@@ -137,6 +132,6 @@ export function createOrder(
     status: "confirmed",
     createdAt: new Date().toISOString(),
     estimatedDelivery: eta.toISOString(),
-    source: commerceLayerConfigured ? "commerce-layer" : "mock"
+    source: "mock"
   };
 }
