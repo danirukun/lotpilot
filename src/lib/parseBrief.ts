@@ -18,7 +18,8 @@ export const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   office: ["office", "workwear smart", "tailored", "business"],
   football: [
     "football", "soccer", "retro jersey", "terrace", "matchworn", "match-worn",
-    " kit ", " kits ", " kits,", " kits.", "bench coat", "drill top"
+    "football kit", "football shirt", "home kit", "away kit", "retro kit",
+    "bench coat", "drill top"
   ],
   custom: [
     "customis", "customiz", "custom denim", "custom jacket", "reworked", "upcycled",
