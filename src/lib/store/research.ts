@@ -220,6 +220,7 @@ export function countLocations(texts: string[]): number {
 /** Handles "4.7 (312 reviews)", "4.7(312)", "4.7 stars", "rated 4.7/5", "3.5 out of 5 57 reviews" and "312 reviews". */
 export function parseRating(text: string): { rating?: number; reviewCount?: number } {
   const num = (s: string) => Number(s.replace(/,/g, ""));
+  const plausible = (s: string) => num(s) > 0 && !(/^(199\d|20[0-3]\d)$/.test(s));
   const compact = text.match(/\b([1-5]\.\d)\s?\(([\d,]{1,7})\)/);
   if (compact) return { rating: num(compact[1]), reviewCount: num(compact[2]) };
 
@@ -227,7 +228,7 @@ export function parseRating(text: string): { rating?: number; reviewCount?: numb
     /\b([1-5](?:\.\d)?)(?![\d.])\s*(★|stars?|\/\s*5|out of 5)?[\s,·(-]+(?:based on\s*)?([\d,]{1,7})\s*(?:google\s+)?(?:reviews?|ratings?)\b/i
   );
   // A bare integer before "N reviews" is usually a street number, not a rating.
-  if (combined && num(combined[3]) > 0 && (combined[1].includes(".") || combined[2])) {
+  if (combined && plausible(combined[3]) && (combined[1].includes(".") || combined[2])) {
     return { rating: num(combined[1]), reviewCount: num(combined[3]) };
   }
 
@@ -235,6 +236,6 @@ export function parseRating(text: string): { rating?: number; reviewCount?: numb
   const count = text.match(/(?:^|[^\d,])([\d,]{1,7})\s*(?:google\s+)?reviews\b/i);
   return {
     rating: rated ? num(rated[1] ?? rated[2]) : undefined,
-    reviewCount: count && num(count[1]) > 0 ? num(count[1]) : undefined
+    reviewCount: count && plausible(count[1]) ? num(count[1]) : undefined
   };
 }

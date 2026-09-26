@@ -13,7 +13,7 @@ export function buildSummary(dna: StoreDNA, matches: ProcuredLot[], plan: Sourci
   const aesthetic =
     dna.aesthetics.length > 0
       ? dna.aesthetics.slice(0, 2).map(labelAesthetic).join(" + ")
-      : "your store";
+      : "general secondhand";
   const place = dna.location ? ` in ${dna.location}` : "";
   const budgetLine = plan.budgetAssumed
     ? ` (no budget given, so I assumed ${gbp(plan.budget)})`

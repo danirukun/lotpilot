@@ -57,7 +57,9 @@ function storePreface(store: StoreProfile): string {
     store.size.suggestedBudget
   )} from the size estimate.`;
   if (store.fashionFit) return read;
-  return `Heads up: the wholesale catalog is secondhand fashion, and ${store.name} looks like a ${store.vertical.label.toLowerCase()} store, so these matches are weak. ${read}`;
+  const vertical = store.vertical.label.toLowerCase();
+  const article = /^[aeiou]/.test(vertical) ? "an" : "a";
+  return `Heads up: the wholesale catalog is secondhand fashion, and ${store.name} looks like ${article} ${vertical} store, so these matches are weak. ${read}`;
 }
 
 const joinSummary = (preface: string, summary: string) => (preface ? `${preface} ${summary}` : summary);
