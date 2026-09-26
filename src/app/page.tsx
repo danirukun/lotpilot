@@ -42,7 +42,7 @@ export default function LandingPage() {
       <section className="relative overflow-hidden">
         <div className="container-app grid items-center gap-12 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
           <div className="animate-fade-up">
-            <span className="label-eyebrow">Agentic Commerce · Fleek wholesale</span>
+            <span className="label-eyebrow">Agentic Commerce · For independent retailers</span>
             <h1 className="mt-4 font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               The AI buyer that stocks your shop while you sleep.
             </h1>
@@ -112,8 +112,8 @@ export default function LandingPage() {
             body="LotPilot doesn't just list lots. It reasons about your store, obeys your procurement policy, negotiates on your behalf and transacts end-to-end."
           />
           <Positioning
-            title="Built on Fleek"
-            body="Fleek is the B2B wholesale marketplace for secondhand fashion — connecting retailers with vintage wholesalers. LotPilot is the buyer on top."
+            title="Built for independent sellers"
+            body="Indie shops with their own shop floor and online store. LotPilot buys for them across many vintage wholesalers, so the owner can run the shop."
           />
         </div>
       </section>

@@ -1,8 +1,8 @@
 import type { WholesaleLot } from "@/lib/types";
 
 /**
- * Seeded catalog of wholesale secondhand fashion lots as they might appear on a
- * B2B marketplace like Fleek. Prices in GBP. Images are deterministic
+ * Seeded catalog of wholesale secondhand fashion lots as they might appear
+ * across vintage wholesale suppliers. Prices in GBP. Images are deterministic
  * placeholders (picsum) so the demo never depends on external asset uploads.
  */
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/800/600`;
