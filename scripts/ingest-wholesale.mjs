@@ -3,13 +3,15 @@
  * Crawl The Wholesaler UK clothing/electronics categories and upsert into
  * Supabase wholesale_documents with local-hash-v1 embeddings.
  *
- * Requires NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
- * and temporary INSERT/UPDATE RLS (or a service role key).
+ * Writes require NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY.
+ * --dry-run crawls without database writes; --limit=N limits category pages.
  *
  * Usage: node scripts/ingest-wholesale.mjs
  */
-const { createClient } = require("@supabase/supabase-js");
-const { parse } = require("node-html-parser");
+import { createClient } from "@supabase/supabase-js";
+import { parse } from "node-html-parser";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 const UA = "LotPilotBot/1.0 (+https://lotpilot.vercel.app; wholesale index research)";
 const EMBED_DIM = 1536;
@@ -195,13 +197,21 @@ function extract(html, pageUrl) {
 }
 
 async function main() {
+  const dryRun = process.argv.includes("--dry-run");
+  const limitArg = process.argv.find(arg => arg.startsWith("--limit="));
+  const limit = limitArg ? Number(limitArg.split("=")[1]) : Infinity;
+  if (!(limit > 0) || (limit !== Infinity && !Number.isInteger(limit))) throw new Error("--limit must be a positive integer");
+  const output = process.argv.find(arg => arg.startsWith("--output="))?.slice("--output=".length);
+  if (process.env.WHOLESALE_EMBED_MODEL && process.env.WHOLESALE_EMBED_MODEL !== "local-hash-v1") {
+    throw new Error("This index uses local-hash-v1. Re-embedding requires a model-versioned index; unset WHOLESALE_EMBED_MODEL.");
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
-  if (!url || !key) {
-    console.error("Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY).");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!dryRun && (!url || !key)) {
+    console.error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or use --dry-run. Public keys are read-only.");
     process.exit(1);
   }
-  const supabase = createClient(url, key);
+  const supabase = !dryRun ? createClient(url, key, { auth: { persistSession: false } }) : null;
 
   const clothingIndex = "https://www.thewholesaler.co.uk/clothing-wholesale/";
   const html = await fetchHtml(clothingIndex);
@@ -209,10 +219,11 @@ async function main() {
   const catUrls = [...new Set(root.querySelectorAll("a").map((a) => a.getAttribute("href") || ""))]
     .map((h) => abs(h, clothingIndex))
     .filter((u) => u && /\/suppliers\/clothing_and_fashion\/[a-z0-9_]+\/?$/i.test(u));
-  const urls = [...new Set([...catUrls, ...EXTRA])];
+  const urls = [...new Set([...catUrls, ...EXTRA])].slice(0, limit);
   console.log("crawling", urls.length, "pages");
 
   const byKey = new Map();
+  let failures = 0;
   for (const pageUrl of urls) {
     try {
       const page = await fetchHtml(pageUrl);
@@ -230,6 +241,7 @@ async function main() {
         }
       }
     } catch (e) {
+      failures++;
       console.log("FAIL", pageUrl, e.message);
     }
   }
@@ -242,6 +254,18 @@ async function main() {
       scraped_at: new Date().toISOString()
     };
   });
+
+  if (!rows.length) throw new Error("The crawl produced no documents; nothing was written.");
+  if (output) {
+    await mkdir(path.dirname(output), { recursive: true });
+    await writeFile(output, JSON.stringify(rows, null, 2));
+  }
+  if (dryRun) {
+    console.log(JSON.stringify({ dryRun: true, pages: urls.length, failures, documents: rows.length, suppliers: rows.filter(row => row.external_id.startsWith("supplier-")).length, model: "local-hash-v1", sample: rows.slice(0, 3).map(({ name, url }) => ({ name, url })) }, null, 2));
+    if (failures) process.exitCode = 1;
+    return;
+  }
+  if (failures) throw new Error(`${failures} pages failed; refusing a partial ingest. Retry the crawl.`);
 
   for (let i = 0; i < rows.length; i += 20) {
     const chunk = rows.slice(i, i + 20);

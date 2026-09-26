@@ -151,7 +151,7 @@ export function DealModal({
             <>
               <div className="flex items-center justify-between">
                 <span className="label-eyebrow">
-                  {phase === "negotiating" ? "Agent negotiating" : "Wholesale checkout"}
+                  {phase === "negotiating" ? "Simulated negotiation" : "Demo checkout"}
                 </span>
                 <button onClick={onClose} className="text-paper/50 hover:text-paper" aria-label="Close">
                   ✕
@@ -271,9 +271,9 @@ function ConfirmedView({ order, onClose }: { order: Order; onClose: () => void }
           <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <h3 className="mt-4 font-display text-2xl">Order confirmed</h3>
+      <h3 className="mt-4 font-display text-2xl">Demo order complete</h3>
       <p className="mt-1 text-sm text-paper/60">
-        LotPilot placed {order.lines.length} lot{order.lines.length > 1 ? "s" : ""} inside your buying policy.
+        {order.lines.length} lot{order.lines.length > 1 ? "s" : ""} in this simulation. No payment was taken or order sent to a supplier.
       </p>
 
       <ul className="mt-5 space-y-1.5 rounded-xl border border-ink-line bg-ink/50 p-4 text-left text-sm">
@@ -297,7 +297,7 @@ function ConfirmedView({ order, onClose }: { order: Order; onClose: () => void }
         <Row label="Order ID" value={order.id} />
         <Row label="Saved vs list" value={gbp(order.savings)} accent />
         <Row label="Shipping" value={gbp(order.shipping)} />
-        <Row label="Total paid" value={gbp(order.amount)} strong />
+        <Row label="Demo total" value={gbp(order.amount)} strong />
         <Row label="Est. delivery" value={formatDate(order.estimatedDelivery)} />
         <Row label="Rail" value={order.source === "commerce-layer" ? "Commerce Layer" : "Mock order"} />
       </dl>

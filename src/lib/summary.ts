@@ -1,17 +1,18 @@
-import { LOTS } from "@/data/lots";
 import { gbp } from "@/lib/format";
 import type { ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
 import type { StoreDNA } from "@/lib/types";
 import { rfqSummaryLine } from "@/lib/rfq/format";
 import { explicitConstraintCount } from "@/lib/rfq/score";
 import type { Rfq } from "@/lib/rfq/types";
+import type { WholesaleResearch } from "@/lib/wholesale/types";
 
 /** Canned-but-specific narrative so the demo reads well without an LLM. */
 export function buildSummary(
   dna: StoreDNA,
   matches: ProcuredLot[],
   plan: SourcingPlan,
-  rfq?: Rfq
+  rfq?: Rfq,
+  wholesale?: WholesaleResearch
 ): string {
   if (matches.length === 0) {
     return "I couldn't find a confident match in the current catalog. Try describing your aesthetic, categories or budget and I'll re-run the buy.";
@@ -28,7 +29,7 @@ export function buildSummary(
     : ` on a ${gbp(plan.budget)} budget`;
 
   const lines = [
-    `Read your store DNA as a ${aesthetic} buyer${place}${budgetLine}. I scanned ${LOTS.length} wholesale lots and checked each one against your buying policy.`,
+    `Read your store DNA as a ${aesthetic} buyer${place}${budgetLine}. I checked the demo catalog against your buying policy.`,
     ...(rfq && explicitConstraintCount(rfq) > 0 ? [`Your RFQ: ${rfqSummaryLine(rfq)}.`] : []),
     `Top pick: ${top.lot.title} from ${top.lot.wholesaler}${
       top.supplier.keySupplier ? " (a key supplier you have bought from before)" : ""
@@ -63,7 +64,11 @@ export function buildSummary(
   const blocked = plan.excluded.find((e) => !e.reason.startsWith("Weak store fit"));
   if (blocked) lines.push(`Excluded ${blocked.title}: ${blocked.reason.toLowerCase()}.`);
 
-  lines.push("Negotiate a single lot, or let me negotiate and buy the whole plan.");
+  if (wholesale?.leads.length) {
+    const leads = wholesale.leads.slice(0, 2).map((lead, i) => `${lead.name} [${i + 1}]`).join(" and ");
+    lines.push(`For supplier outreach, ${wholesale.mode === "rag" ? "the directory search" : "fallback directory research"} found ${leads}. Confirm stock and prices with these suppliers before buying.`);
+  }
+  lines.push("Try a simulated negotiation for one lot or the whole plan.");
   return lines.join(" ");
 }
 

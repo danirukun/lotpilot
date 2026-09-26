@@ -13,6 +13,7 @@ import { extractStoreProfile } from "@/lib/store/extract";
 import { researchWholesale } from "@/lib/wholesale/research";
 import type { StoreProfile } from "@/lib/store/types";
 import type { AgentResult, LotCatalog, StoreDNA } from "@/lib/types";
+import type { ProgressReporter } from "@/lib/progress";
 
 export const DEFAULT_BUDGET = 2000;
 
@@ -24,12 +25,14 @@ export const DEFAULT_BUDGET = 2000;
 export async function runAgent(
   brief: string,
   policyInput?: unknown,
-  opts: { rfq?: unknown; personaId?: unknown; refresh?: boolean } = {}
+  opts: { rfq?: unknown; personaId?: unknown; refresh?: boolean; onProgress?: ProgressReporter } = {}
 ): Promise<AgentResult> {
+  opts.onProgress?.({ stage: "profile", message: "Reading your shop brief" });
   return runAgentFromDna(parseBrief(brief), policyInput, undefined, {
     rfq: opts.rfq,
     personaId: resolvePersonaId(brief, opts.personaId),
-    refresh: opts.refresh
+    refresh: opts.refresh,
+    onProgress: opts.onProgress
   });
 }
 
@@ -37,11 +40,13 @@ export async function runAgent(
 export async function runAgentForStore(
   storeUrl: string,
   policyInput?: unknown,
-  opts: { refresh?: boolean } = {}
+  opts: { refresh?: boolean; onProgress?: ProgressReporter } = {}
 ): Promise<AgentResult> {
+  opts.onProgress?.({ stage: "profile", message: "Reading the storefront and product collections" });
   const store = await extractStoreProfile(storeUrl, { refresh: opts.refresh });
   return runAgentFromDna({ ...store.dna, budget: store.size.suggestedBudget }, policyInput, store, {
-    refresh: opts.refresh
+    refresh: opts.refresh,
+    onProgress: opts.onProgress
   });
 }
 
@@ -49,8 +54,9 @@ export async function runAgentFromDna(
   dna: StoreDNA,
   policyInput?: unknown,
   store?: StoreProfile,
-  opts: { rfq?: unknown; personaId?: string; refresh?: boolean } = {}
+  opts: { rfq?: unknown; personaId?: string; refresh?: boolean; onProgress?: ProgressReporter } = {}
 ): Promise<AgentResult> {
+  opts.onProgress?.({ stage: "requirements", message: "Checking your budget, grades and buying rules" });
   const policy = sanitizePolicy(policyInput);
   const rfq = await resolveRfq(dna, {
     override: opts.rfq,
@@ -59,6 +65,7 @@ export async function runAgentFromDna(
   const budget = rfq.budget ?? dna.budget ?? DEFAULT_BUDGET;
 
   const catalog: LotCatalog = store ? resolveCatalog(store) : "fashion";
+  opts.onProgress?.({ stage: "matching", message: "Ranking demo lots and building a policy-compliant basket" });
   const candidates = selectCandidates(dna, rfq, policy, budget, opts.personaId, catalog);
   const budgetAssumed = rfq.budget === undefined && dna.budget === undefined;
   const nonFashionStore = Boolean(store && !store.fashionFit);
@@ -70,7 +77,12 @@ export async function runAgentFromDna(
       : {})
   });
   const matches = rankProcured(candidates).slice(0, 6);
-  const wholesale = await researchWholesale(dna, store, { refresh: opts.refresh });
+  opts.onProgress?.({ stage: "research", message: "Searching UK wholesale directory sources" });
+  const wholesale = await researchWholesale({
+    ...dna, categories: rfq.categories, aesthetics: rfq.aesthetics, brands: rfq.brands
+  }, store, { refresh: opts.refresh });
+  opts.onProgress?.({ stage: "research", message: `${wholesale.leads.length} directory leads found${wholesale.cached ? " in saved research" : wholesale.mode === "rag" ? " in the live index" : " using fallback research"}` });
+  opts.onProgress?.({ stage: "summary", message: "Preparing your buying brief and source links" });
 
   const base = {
     dna,
@@ -85,7 +97,7 @@ export async function runAgentFromDna(
   const preface = store ? storePreface(store) : "";
 
   if (llmAvailable()) {
-    const llmSummary = await generateLlmSummary(dna, matches, plan, store, rfq);
+    const llmSummary = await generateLlmSummary(dna, matches, plan, store, rfq, wholesale);
     if (llmSummary) {
       return { ...base, summary: joinSummary(preface, llmSummary), source: "llm", llmModel: llmModelName() };
     }
@@ -93,7 +105,7 @@ export async function runAgentFromDna(
 
   return {
     ...base,
-    summary: joinSummary(preface, buildSummary(dna, matches, plan, rfq)),
+    summary: joinSummary(preface, buildSummary(dna, matches, plan, rfq, wholesale)),
     source: "deterministic"
   };
 }

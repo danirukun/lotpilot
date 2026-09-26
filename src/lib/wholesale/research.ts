@@ -12,7 +12,7 @@ import path from "path";
 export type { WholesaleLead, WholesaleResearch } from "@/lib/wholesale/types";
 
 const MAX_LEADS = 6;
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 4;
 const DEFAULT_TTL_MS = Number(process.env.WHOLESALE_CACHE_TTL_MS ?? 24 * 60 * 60 * 1000);
 
 type CacheEnvelope = {
@@ -53,19 +53,20 @@ function leadFromIndex(entry: WholesaleIndexEntry, score: number, why: string): 
 }
 
 export function buildWholesaleQuery(dna: StoreDNA, store?: StoreProfile): string {
-  const vertical = store?.vertical.label ?? "fashion";
-  const style = dna.aesthetics.slice(0, 2).join(" ");
-  const cats = dna.categories.slice(0, 3).join(" ");
-  const brands = dna.brands.slice(0, 2).join(" ");
-  return ["UK wholesale suppliers", vertical, style, cats, brands, "thewholesaler"]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const terms = [...dna.categories.slice(0, 3), ...dna.aesthetics.slice(0, 2), ...dna.brands.slice(0, 2)]
+    .flatMap(term => term.toLowerCase().split(/[^a-z0-9]+/))
+    .filter(term => term.length > 1);
+  // websearch_to_tsquery treats whitespace as AND. Product alternatives need OR.
+  return [...new Set(terms)].join(" OR ") || store?.vertical.primary || "clothing";
 }
 
 function cacheKey(dna: StoreDNA, store?: StoreProfile): string {
   const raw = JSON.stringify({
+    backend: process.env.NEXT_PUBLIC_SUPABASE_URL ?? null,
+    rag: ragAvailable(),
+    web: researchAvailable(),
+    model: process.env.WHOLESALE_EMBED_MODEL || "local-hash-v1",
+    query: buildWholesaleQuery(dna, store),
     a: dna.aesthetics.slice().sort(),
     c: dna.categories.slice().sort(),
     b: dna.brands.slice().sort(),
@@ -181,7 +182,7 @@ export async function researchWholesale(
     if (cached) return cached;
   }
 
-  const vertical = store?.vertical.primary;
+  const vertical = store?.vertical.primary ?? "clothing";
   const query = buildWholesaleQuery(dna, store);
   const notes: string[] = [];
   const sources: ResearchSource[] = [];
@@ -189,8 +190,10 @@ export async function researchWholesale(
   let mode: WholesaleResearch["mode"] = "index";
 
   let usedRag = false;
+  let model: string | undefined;
   if (ragAvailable()) {
-    const rag = await searchWholesaleRag(query, MAX_LEADS);
+    const rag = await searchWholesaleRag(query, MAX_LEADS, vertical);
+    model = rag?.model;
     if (rag?.hits?.length) {
       usedRag = true;
       mode = "rag";
@@ -198,10 +201,10 @@ export async function researchWholesale(
       mergeLeads(leads, ragLeads);
       for (const lead of ragLeads) sources.push({ title: lead.name, url: lead.url });
       notes.push(
-        `Supabase hybrid RRF returned ${rag.hits.length} directory hits (${rag.model}: FTS + trigram + embedding).`
+        `Supabase returned ${rag.hits.length} relevant directory records using ${rag.model === "local-hash-v1" ? "full-text, fuzzy text and local keyword vectors" : "keyword search only"}.`
       );
     } else {
-      notes.push("Supabase RAG returned nothing. Falling back to seeded index.");
+      notes.push(rag ? "No relevant indexed leads. Using saved directory categories." : "Live directory search is unavailable. Using saved directory categories.");
     }
   } else {
     notes.push("No Supabase URL/key. Using the seeded The Wholesaler UK index.");
@@ -214,7 +217,7 @@ export async function researchWholesale(
     if (seeded.length) notes.push(`Matched ${seeded.length} seeded directory categories.`);
 
     if (researchAvailable()) {
-      const live = await tavilySearch(query, 7000, {
+      const live = await tavilySearch(`UK wholesale ${query.replace(/ OR /g, " ")}`, 7000, {
         includeDomains: ["thewholesaler.co.uk"],
         maxResults: 6
       });
@@ -241,16 +244,19 @@ export async function researchWholesale(
     }
   }
 
-  const ranked = [...leads.values()]
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
-    .slice(0, MAX_LEADS);
+  // Preserve database RRF ordering; the display score is rounded and can tie.
+  const ranked = (usedRag ? [...leads.values()] : [...leads.values()]
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))).slice(0, MAX_LEADS);
 
   const research: WholesaleResearch = {
     query,
     leads: ranked,
     sources: sources.slice(0, 8),
     mode,
-    notes
+    notes,
+    model
   };
+  // A temporary outage must not pin a configured live demo to fallback for 24h.
+  if (ragAvailable() && !usedRag) return { ...research, cached: false };
   return writeCache(key, research);
 }

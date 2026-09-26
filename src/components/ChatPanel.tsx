@@ -17,6 +17,7 @@ import type { BuyingPolicy, ProcuredLot } from "@/lib/procurement/types";
 import type { AgentResult } from "@/lib/types";
 import { rfqSummaryLine } from "@/lib/rfq/format";
 import { applyRfqPatch, type RfqPatch } from "@/lib/rfq/resolve";
+import { readAgentStream, type AgentProgress } from "@/lib/progress";
 
 interface ActiveDeal {
   items: DealItem[];
@@ -46,7 +47,7 @@ interface AgentTurn {
 }
 type Turn = UserTurn | AgentTurn;
 
-type AgentRequest = ({ brief: string } | { storeUrl: string }) & { rfq?: RfqPatch };
+type AgentRequest = ({ brief: string } | { storeUrl: string }) & { rfq?: RfqPatch; refresh?: boolean };
 
 const SUGGESTIONS = [
   "I run a Y2K thrift shop in Shoreditch, £2000 budget.",
@@ -58,6 +59,8 @@ export function ChatPanel() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<AgentProgress[]>([]);
+  const runningRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [policy, setPolicy] = useState<BuyingPolicy>(DEFAULT_POLICY);
   const [lastRequest, setLastRequest] = useState<AgentRequest | null>(null);
@@ -67,7 +70,7 @@ export function ChatPanel() {
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
-  }, [turns, loading]);
+  }, [turns, loading, progress]);
 
   const revealChat = () => {
     chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -89,7 +92,9 @@ export function ChatPanel() {
   };
 
   async function run(request: AgentRequest, userText: string) {
-    if (loading) return;
+    if (runningRef.current) return;
+    runningRef.current = true;
+    setProgress([]);
     setError(null);
     setTurns((t) => [...t, { role: "user", text: userText }]);
     setLastRequest(request);
@@ -99,11 +104,16 @@ export function ChatPanel() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
         body: JSON.stringify({ ...request, policy })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Agent error");
+      if (!res.ok) {
+        const failure = await res.json();
+        throw new Error(failure?.error || "Agent error");
+      }
+      const data = await readAgentStream(res, event => setProgress(previous => [
+        ...previous.filter(step => step.stage !== event.stage), event
+      ]));
       setTurns((t) => [...t, { role: "agent", result: data as AgentResult }]);
       revealChat();
       track("matches_returned", {
@@ -114,6 +124,7 @@ export function ChatPanel() {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setLoading(false);
+      runningRef.current = false;
     }
   }
 
@@ -174,9 +185,7 @@ export function ChatPanel() {
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
-            Fetches the live page and Shopify feeds when public. Runs Tavily when{" "}
-            <code className="text-paper/70">TAVILY_API_KEY</code> is set, and Google Places when mapped.
-            Demo domains use a snapshot only if the live page fails.
+            Reads the public storefront and product collections. Sample stores use a saved profile if their site is unavailable.
           </p>
           <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>
@@ -234,9 +243,14 @@ export function ChatPanel() {
             )
           )}
 
-          {loading && <ThinkingBubble />}
+          {loading && <ThinkingBubble progress={progress} />}
           {error && (
             <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>
+          )}
+          {!loading && lastRequest && (
+            <button type="button" className="btn-ghost text-xs" onClick={() => run({ ...lastRequest, refresh: true }, "Search again with fresh sources")}>
+              ↻ Refresh sources
+            </button>
           )}
         </div>
 
@@ -325,6 +339,7 @@ function AgentMessage({
         <WholesaleResearchCard research={result.wholesale} />
       )}
 
+      <p className="text-xs text-paper/55">Demo inventory · Illustrative prices and supplier scores. Negotiation and checkout are simulated.</p>
       <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
       {result.matches.length > 0 && (
@@ -409,15 +424,22 @@ function EmptyState({ onPick }: { onPick: (brief: string) => void }) {
   );
 }
 
-function ThinkingBubble() {
+function ThinkingBubble({ progress }: { progress: AgentProgress[] }) {
   return (
     <div className="flex gap-3">
       <AgentAvatar />
-      <div className="rounded-2xl rounded-tl-sm bg-ink/70 px-4 py-3">
-        <div className="flex items-center gap-1.5 text-sm text-paper/70">
-          <span>Scanning the wholesale floor</span>
-          <Dot /> <Dot delay="0.2s" /> <Dot delay="0.4s" />
-        </div>
+      <div className="rounded-2xl rounded-tl-sm bg-ink/70 px-4 py-3" role="status" aria-live="polite">
+        <p className="mb-2 text-sm font-semibold">Finding your next buy</p>
+        <ul className="space-y-2 text-xs text-paper/70">
+          {progress.map((step, index) => (
+            <li key={step.stage} className="flex items-center gap-2">
+              <span aria-hidden="true" className="text-brand-300">{index < progress.length - 1 ? "✓" : "◌"}</span>
+              {step.message}
+              {index === progress.length - 1 && <Dot />}
+            </li>
+          ))}
+          {progress.length === 0 && <li>Connecting to LotPilot… <Dot /></li>}
+        </ul>
       </div>
     </div>
   );

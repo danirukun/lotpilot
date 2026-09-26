@@ -29,6 +29,7 @@ yarn-error.log*
 
 # storefront analysis cache
 .cache/
+supabase/.temp/
 
 # vercel
 .vercel
