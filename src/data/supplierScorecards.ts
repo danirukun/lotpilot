@@ -9,11 +9,11 @@ export interface SupplierMetrics {
   fillRate: number;
   /** Returns plus QC disputes as a share of orders, percent. Lower is better. */
   qcReturnRisk: number;
-  /** Fleek orders the metrics are measured over (trailing 12 months). */
+  /** Wholesale orders the metrics are measured over (trailing 12 months). */
   ordersTracked: number;
 }
 
-/** Trailing-12-month Fleek fulfilment metrics per wholesaler, keyed by supplier name. */
+/** Trailing-12-month fulfilment metrics per wholesaler, keyed by supplier name. */
 export const SUPPLIER_METRICS: Record<string, SupplierMetrics> = {
   "Rewind Bales (Manchester)": {
     reliability: 93,

@@ -6,7 +6,7 @@ export interface PurchaseRecord {
   lastOrder: string;
 }
 
-/** Past Fleek orders per store persona, keyed by persona id. */
+/** Past wholesale orders per store persona, keyed by persona id. */
 export const PURCHASE_HISTORY: Record<string, PurchaseRecord[]> = {
   "manchester-football": [
     { supplier: "Terrace Archive (Manchester)", orders: 14, onTimeOrders: 13, lastOrder: "2026-09-02" },
