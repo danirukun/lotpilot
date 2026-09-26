@@ -103,8 +103,8 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
 
       {!store.fashionFit && (
         <div className="mx-5 mb-4 rounded-xl border border-accent-500/40 bg-accent-500/10 px-3 py-2 text-xs text-accent-400">
-          This looks like a {vertical.label.toLowerCase()} store. The wholesale catalog is secondhand fashion, so
-          matches below are weak.
+          This looks like {/^[aeiou]/i.test(vertical.label) ? "an" : "a"} {vertical.label.toLowerCase()} store. The
+          wholesale catalog is secondhand fashion, so matches below are weak.
         </div>
       )}
 
