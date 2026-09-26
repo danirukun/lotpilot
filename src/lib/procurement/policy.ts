@@ -1,5 +1,6 @@
 import type { Grade, WholesaleLot } from "@/lib/types";
 import type { Supplier } from "@/data/suppliers";
+import { supplierMetricsFor } from "@/data/supplierScorecards";
 import type {
   BuyingPolicy,
   PolicyEvaluation,
@@ -64,26 +65,29 @@ export function sanitizePolicy(input: unknown): BuyingPolicy {
   };
 }
 
-/** 0..100 weighted supplier scorecard. */
+/**
+ * 0..100 supplier scorecard: 30% reliability, 30% grade consistency,
+ * 20% fill rate, 20% QC/return safety (each return point costs 5).
+ */
 export function scoreSupplier(s: Supplier): SupplierScorecard {
-  const leadScore = Math.max(0, 1 - (s.leadTimeDays - 1) / 6);
-  const score =
-    (s.rating / 5) * 25 +
-    s.onTimeRate * 25 +
-    s.gradeAccuracy * 30 +
-    Math.max(0, 1 - s.disputeRate * 10) * 10 +
-    leadScore * 10;
+  const m = supplierMetricsFor(s);
+  const qcSafety = Math.max(0, 100 - m.qcReturnRisk * 5);
+  const score = Math.round(
+    0.3 * m.reliability + 0.3 * m.gradeConsistency + 0.2 * m.fillRate + 0.2 * qcSafety
+  );
   return {
     name: s.name,
     city: s.city,
     tier: s.tier,
-    score: Math.round(score),
+    score,
     rating: s.rating,
     onTimeRate: s.onTimeRate,
     gradeAccuracy: s.gradeAccuracy,
     disputeRate: s.disputeRate,
     leadTimeDays: s.leadTimeDays,
-    yearsOnFleek: s.yearsOnFleek
+    yearsOnFleek: s.yearsOnFleek,
+    ...m,
+    band: score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : "D"
   };
 }
 

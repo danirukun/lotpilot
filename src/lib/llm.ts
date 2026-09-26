@@ -160,3 +160,23 @@ async function callAnthropic(
   const data = await res.json();
   return data?.content?.[0]?.text ?? null;
 }
+
+/** Ask the model for a single JSON object. Returns null on no key, timeout, HTTP error or bad JSON. */
+export async function completeJson(system: string, user: string, timeoutMs = 6000): Promise<unknown> {
+  const config = resolveConfig();
+  if (!config) return null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const text =
+      config.provider === "openai"
+        ? await callOpenAI(config, system, user, controller.signal)
+        : await callAnthropic(config, system, user, controller.signal);
+    const json = text?.match(/\{[\s\S]*\}/)?.[0];
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}

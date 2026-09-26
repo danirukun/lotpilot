@@ -1,5 +1,7 @@
 import type { Grade, LotScore } from "@/lib/types";
 import type { SupplierTier } from "@/data/suppliers";
+import type { PurchaseRecord } from "@/data/purchaseHistory";
+import type { RfqMatch } from "@/lib/rfq/types";
 
 export interface BuyingPolicy {
   minLotPrice: number;
@@ -57,6 +59,16 @@ export interface SupplierScorecard {
   disputeRate: number;
   leadTimeDays: number;
   yearsOnFleek: number;
+  reliability: number;
+  gradeConsistency: number;
+  fillRate: number;
+  qcReturnRisk: number;
+  ordersTracked: number;
+  /** Letter band for the overall score. */
+  band: "A" | "B" | "C" | "D";
+  /** Past orders by the active store persona. */
+  history?: PurchaseRecord;
+  keySupplier?: boolean;
 }
 
 export interface ProcurementMetrics {
@@ -79,6 +91,7 @@ export interface ProcuredLot extends LotScore {
   supplier: SupplierScorecard;
   metrics: ProcurementMetrics;
   policy: PolicyEvaluation;
+  rfq?: RfqMatch;
 }
 
 export type Party = "buyer" | "supplier";
@@ -118,6 +131,9 @@ export interface PlanLine {
   estimatedPrice: number;
   landedProfit: number;
   decisionScore: number;
+  supplierScore?: number;
+  keySupplier?: boolean;
+  rfqScore?: number;
 }
 
 export interface Exclusion {

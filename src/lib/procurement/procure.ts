@@ -11,6 +11,8 @@ import type {
   SourcingPlan
 } from "@/lib/procurement/types";
 import type { LotScore } from "@/lib/types";
+import { KEY_SUPPLIER_BOOST, withPurchaseHistory } from "@/lib/procurement/keySuppliers";
+import type { RfqMatch } from "@/lib/rfq/types";
 
 const clamp = (n: number, min = 0, max = 100) => Math.max(min, Math.min(max, n));
 
@@ -19,11 +21,12 @@ export function procureLot(
   match: LotScore,
   policy: BuyingPolicy,
   budget: number,
-  lotsFromSupplier = 1
+  lotsFromSupplier = 1,
+  extras: { rfq?: RfqMatch; personaId?: string } = {}
 ): ProcuredLot {
   const { lot } = match;
   const supplier = supplierByName(lot.wholesaler);
-  const scorecard = scoreSupplier(supplier);
+  const scorecard = withPurchaseHistory(scoreSupplier(supplier), extras.personaId);
   const market = marketPricePerPiece(lot);
   const adjustedRevenue = adjustedRevenueFor(lot);
   const priceIndex = lot.wholesalePrice / lot.pieceCount / market;
@@ -54,8 +57,14 @@ export function procureLot(
   );
 
   const valueScore = clamp(100 - (priceIndex - 0.85) * 250);
-  const rawDecision =
-    0.5 * match.score + 0.2 * scorecard.score + 0.15 * valueScore + 0.15 * (100 - risk);
+  const relevance = extras.rfq?.relevance ?? match.score;
+  const rawDecision = clamp(
+    0.45 * relevance +
+      0.25 * scorecard.score +
+      0.15 * valueScore +
+      0.15 * (100 - risk) +
+      (scorecard.keySupplier ? KEY_SUPPLIER_BOOST : 0)
+  );
   const decisionScore = Math.round(
     policyEval.status === "blocked" ? Math.min(35, rawDecision) : rawDecision
   );
@@ -74,16 +83,23 @@ export function procureLot(
     decisionScore
   };
 
-  return { ...match, supplier: scorecard, metrics, policy: policyEval };
+  return {
+    ...match,
+    supplier: scorecard,
+    metrics,
+    policy: policyEval,
+    ...(extras.rfq ? { rfq: extras.rfq } : {})
+  };
 }
 
-/** Rank procured lots: policy-cleared first, then by decision score. */
+/** Rank procured lots: policy-cleared first, then by decision score, then supplier score. */
 export function rankProcured(lots: ProcuredLot[]): ProcuredLot[] {
   const order = { compliant: 0, negotiate: 0, blocked: 1 };
   return [...lots].sort(
     (a, b) =>
       order[a.policy.status] - order[b.policy.status] ||
-      b.metrics.decisionScore - a.metrics.decisionScore
+      b.metrics.decisionScore - a.metrics.decisionScore ||
+      b.supplier.score - a.supplier.score
   );
 }
 
@@ -120,8 +136,13 @@ export function buildSourcingPlan(
       exclude(p, firstFailure(p));
       continue;
     }
-    if (p.score < 50) {
-      exclude(p, `Weak store fit (${p.score}/100)`);
+    if (p.rfq?.hardMiss) {
+      exclude(p, `Outside your RFQ: ${p.rfq.hardMiss.label.toLowerCase()} (${p.rfq.hardMiss.detail})`);
+      continue;
+    }
+    const fit = p.rfq?.gate ?? p.score;
+    if (fit < 50) {
+      exclude(p, `Weak store fit (${fit}/100)`);
       continue;
     }
     if ((categoryLots.get(lot.category) ?? 0) >= policy.maxLotsPerCategory) {
@@ -169,7 +190,10 @@ export function buildSourcingPlan(
       listPrice: p.lot.wholesalePrice,
       estimatedPrice: price,
       landedProfit: Math.round(adjustedRevenueFor(p.lot) - price - p.metrics.shipping),
-      decisionScore: p.metrics.decisionScore
+      decisionScore: p.metrics.decisionScore,
+      supplierScore: p.supplier.score,
+      keySupplier: Boolean(p.supplier.keySupplier),
+      ...(p.rfq ? { rfqScore: p.rfq.score } : {})
     };
   });
 
