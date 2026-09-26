@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { SourcingOverview } from "@/components/SourcingOverview";
 import { RfqSummaryCard } from "@/components/RfqSummaryCard";
 import { StoreProfileCard } from "@/components/StoreProfileCard";
 import { WholesaleResearchCard } from "@/components/WholesaleResearchCard";
@@ -101,6 +102,7 @@ export function ChatPanel() {
   }
 
   const started = turns.length > 0 || loading;
+  const latestResult = [...turns].reverse().find((turn): turn is AgentTurn => turn.role === "agent")?.result;
 
   const editRfq = (result: AgentResult, patch: RfqPatch) => {
     track("rfq_edited", { fields: Object.keys(patch).length });
@@ -114,6 +116,10 @@ export function ChatPanel() {
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       {/* Sidebar — below chat on narrow viewports so results are not off-screen */}
       <aside className="order-2 space-y-4 lg:order-1">
+        <div className="card overflow-hidden">
+          <div className="border-b border-ink-line bg-brand-500/10 p-4"><span className="label-eyebrow">Buying workspace</span><h2 className="mt-1 font-display text-xl">Find your next stock</h2><p className="mt-2 text-xs text-paper/60">Start with a shop, review its profile, then explore suppliers.</p></div>
+          <ol className="space-y-3 p-4 text-xs">{["Read your store", "Confirm your requirements", "Review supplier evidence"].map((step, i) => <li key={step} className="flex items-center gap-3"><span className="grid h-6 w-6 place-items-center rounded-full border border-brand-500/30 bg-brand-500/10 font-semibold text-brand-300">{i + 1}</span><span className="text-paper/70">{step}</span></li>)}</ol>
+        </div>
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
@@ -122,7 +128,11 @@ export function ChatPanel() {
           <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>
 
-
+        <div className="card p-4">
+          <span className="label-eyebrow">Example buying briefs</span>
+          <div className="mt-3 space-y-2">{SUGGESTIONS.map((brief, i) => <button key={brief} type="button" disabled={loading} onClick={() => submit(brief)} className="block w-full rounded-xl border border-ink-line bg-ink/30 p-3 text-left transition hover:border-brand-500/60 disabled:opacity-50"><span className="block text-sm font-semibold">{["Y2K & streetwear", "Denim & workwear", "Dresses & knitwear"][i]}</span><span className="mt-1 block text-xs leading-relaxed text-paper/55">{brief}</span></button>)}</div>
+        </div>
+        {latestResult && <SourcingOverview result={latestResult} />}
       </aside>
 
       {/* Conversation — first on mobile so persona / send results are on screen */}
@@ -232,6 +242,8 @@ function AgentMessage({
       </div>
 
       {result.store && <StoreProfileCard store={result.store} />}
+
+      <SourcingOverview result={result} />
 
       {result.rfq && <RfqSummaryCard rfq={result.rfq} onEdit={onEditRfq} disabled={disabled} />}
 
