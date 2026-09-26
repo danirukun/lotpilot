@@ -45,6 +45,7 @@ LotPilot acts as the retailer's procurement agent. It turns a plain-language bri
 - **Deal room.** A modal plays back each negotiation message, then shows the savings before checkout.
 - **Simulated checkout.** The server recomputes every negotiated price, so the client cannot set a price. The order shows lines, savings, shipping, total, and a delivery estimate.
 - **Optional LLM narration.** With an API key, a model writes the buyer's briefing. Ranking, policy, and numbers stay deterministic.
+- **UK wholesale index.** The agent matches store DNA to [The Wholesaler UK](https://www.thewholesaler.co.uk/) directory categories and, when keyed, runs a live Tavily search on that site. Leads show in the demo as external supplier links.
 - **Offline-first.** No key is required for any step of the demo.
 
 ## Store feature extraction
