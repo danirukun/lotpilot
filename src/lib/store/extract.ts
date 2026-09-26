@@ -58,7 +58,9 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
       mode = "live";
       parsed = parsePage(html, domain);
     } else {
-      notes.push("Could not fetch the landing page. Profile uses the store name and web research only.");
+      notes.push(
+        `Could not fetch the landing page. Profile uses the store name${researchAvailable() ? " and web research" : ""} only.`
+      );
     }
   }
 
