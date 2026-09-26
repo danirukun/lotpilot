@@ -1,4 +1,5 @@
 import type { ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
+import type { StoreProfile } from "@/lib/store/types";
 import type { StoreDNA } from "@/lib/types";
 
 interface LlmConfig {
@@ -41,7 +42,8 @@ export function llmModelName(): string | undefined {
 export async function generateLlmSummary(
   dna: StoreDNA,
   matches: ProcuredLot[],
-  plan: SourcingPlan
+  plan: SourcingPlan,
+  store?: StoreProfile
 ): Promise<string | null> {
   const config = resolveConfig();
   if (!config) return null;
@@ -67,12 +69,29 @@ export async function generateLlmSummary(
     excluded: plan.excluded.slice(0, 3)
   };
 
+  const storeContext = store && {
+    name: store.name,
+    domain: store.domain,
+    vertical: store.vertical.label,
+    fashionFit: store.fashionFit,
+    size: store.size.label,
+    suggestedBudget: store.size.suggestedBudget,
+    categories: store.catalog.categories.slice(0, 8),
+    maps: store.maps && { rating: store.maps.rating, reviews: store.maps.reviewCount, locality: store.maps.locality },
+    seoDescription: store.seo.description ?? store.seo.ogDescription
+  };
+
   const system =
     "You are LotPilot, an expert wholesale buying agent for UK indie secondhand fashion retailers. " +
     "Given a store brief and a pre-ranked list of wholesale lots, write a confident, concise buyer's briefing (3-4 sentences). " +
-    "Reference the top pick, the recommended sourcing plan (spend, negotiated savings, landed profit) and one policy exclusion if present. Do not invent lots or numbers beyond what is provided. British English, no markdown headers.";
+    "Reference the top pick, the recommended sourcing plan (spend, negotiated savings, landed profit) and one policy exclusion if present. Do not invent lots or numbers beyond what is provided. British English, no markdown headers. " +
+    "If a store profile is given, it was read from the store's website; a short store read-out is already shown before your text, so do not repeat it. If fashionFit is false, say plainly that the matches are weak.";
 
-  const user = JSON.stringify({ brief: dna.brief, dna, rankedLots: context, sourcingPlan: planContext }, null, 2);
+  const user = JSON.stringify(
+    { brief: dna.brief, dna, store: storeContext, rankedLots: context, sourcingPlan: planContext },
+    null,
+    2
+  );
 
   try {
     const controller = new AbortController();

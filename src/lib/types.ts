@@ -1,4 +1,5 @@
 import type { BuyingPolicy, ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
+import type { StoreProfile } from "@/lib/store/types";
 
 export type Grade = "A" | "B" | "AB" | "Mixed";
 
@@ -75,6 +76,8 @@ export interface AgentResult {
   summary: string;
   source: "llm" | "deterministic";
   llmModel?: string;
+  /** Present when the run started from a store URL. */
+  store?: StoreProfile;
 }
 
 export interface OrderLine {
