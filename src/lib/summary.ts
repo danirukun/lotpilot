@@ -1,8 +1,10 @@
 import { LOTS } from "@/data/lots";
-import type { LotScore, StoreDNA } from "@/lib/types";
+import { gbp } from "@/lib/format";
+import type { ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
+import type { StoreDNA } from "@/lib/types";
 
 /** Canned-but-specific narrative so the demo reads well without an LLM. */
-export function buildSummary(dna: StoreDNA, matches: LotScore[]): string {
+export function buildSummary(dna: StoreDNA, matches: ProcuredLot[], plan: SourcingPlan): string {
   if (matches.length === 0) {
     return "I couldn't find a confident match in the current catalog. Try describing your aesthetic, categories or budget and I'll re-run the buy.";
   }
@@ -13,28 +15,31 @@ export function buildSummary(dna: StoreDNA, matches: LotScore[]): string {
       ? dna.aesthetics.slice(0, 2).map(labelAesthetic).join(" + ")
       : "your store";
   const place = dna.location ? ` in ${dna.location}` : "";
-  const budgetLine = dna.budget ? ` on a \u00A3${dna.budget.toLocaleString()} budget` : "";
-
-  const affordable = dna.budget
-    ? matches.filter((m) => m.budgetFit).slice(0, 3)
-    : matches.slice(0, 3);
-  const basketCost = affordable.reduce((sum, m) => sum + m.lot.wholesalePrice, 0);
-  const basketProfit = affordable.reduce((sum, m) => sum + m.economics.projectedProfit, 0);
+  const budgetLine = plan.budgetAssumed
+    ? ` (no budget given, so I assumed ${gbp(plan.budget)})`
+    : ` on a ${gbp(plan.budget)} budget`;
 
   const lines = [
-    `Read your store DNA as a ${aesthetic} buyer${place}${budgetLine}. I scanned ${LOTS.length} wholesale lots and ranked the best fits below.`,
-    `Top pick: ${top.lot.title} from ${top.lot.wholesaler} — ${top.score}/100 fit, ~${Math.round(top.economics.roiPct)}% projected ROI on £${top.lot.wholesalePrice}.`
+    `Read your store DNA as a ${aesthetic} buyer${place}${budgetLine}. I scanned ${LOTS.length} wholesale lots and checked each one against your buying policy.`,
+    `Top pick: ${top.lot.title} from ${top.lot.wholesaler}: ${top.score}/100 fit, decision score ${top.metrics.decisionScore}, ${top.metrics.landedRoiPct}% landed ROI.`
   ];
 
-  if (affordable.length > 1) {
+  if (plan.lines.length > 0) {
     lines.push(
-      `A ${affordable.length}-lot opening buy (£${basketCost.toLocaleString()}) projects roughly £${Math.round(
-        basketProfit
-      ).toLocaleString()} gross profit once sold through.`
+      `Recommended opening buy: ${plan.lines.length} lot${plan.lines.length > 1 ? "s" : ""} from ${
+        plan.supplierMix.length
+      } supplier${plan.supplierMix.length > 1 ? "s" : ""} for ${gbp(plan.totalSpend)} after negotiation (${gbp(
+        plan.estimatedSavings
+      )} under list), projecting ${gbp(plan.expectedLandedProfit)} landed profit.`
     );
+  } else {
+    lines.push("No lot clears your policy yet. Loosen a rule in the policy panel and re-run.");
   }
 
-  lines.push("Confirm any lot to run a simulated wholesale checkout.");
+  const blocked = plan.excluded.find((e) => !e.reason.startsWith("Weak store fit"));
+  if (blocked) lines.push(`Excluded ${blocked.title}: ${blocked.reason.toLowerCase()}.`);
+
+  lines.push("Negotiate a single lot, or let me negotiate and buy the whole plan.");
   return lines.join(" ");
 }
 

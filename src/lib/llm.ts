@@ -1,4 +1,5 @@
-import type { LotScore, StoreDNA } from "@/lib/types";
+import type { ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
+import type { StoreDNA } from "@/lib/types";
 
 interface LlmConfig {
   provider: "openai" | "anthropic";
@@ -39,7 +40,8 @@ export function llmModelName(): string | undefined {
  */
 export async function generateLlmSummary(
   dna: StoreDNA,
-  matches: LotScore[]
+  matches: ProcuredLot[],
+  plan: SourcingPlan
 ): Promise<string | null> {
   const config = resolveConfig();
   if (!config) return null;
@@ -50,16 +52,27 @@ export async function generateLlmSummary(
     grade: m.lot.grade,
     price: m.lot.wholesalePrice,
     fit: m.score,
-    roiPct: Math.round(m.economics.roiPct),
+    landedRoiPct: m.metrics.landedRoiPct,
+    priceVsMarket: m.metrics.priceIndex,
+    supplierScore: m.supplier.score,
+    decisionScore: m.metrics.decisionScore,
+    policyStatus: m.policy.status,
     reasons: m.reasons
   }));
+  const planContext = {
+    lines: plan.lines.map((l) => ({ title: l.title, list: l.listPrice, negotiated: l.estimatedPrice })),
+    totalSpend: plan.totalSpend,
+    savings: plan.estimatedSavings,
+    landedProfit: plan.expectedLandedProfit,
+    excluded: plan.excluded.slice(0, 3)
+  };
 
   const system =
     "You are LotPilot, an expert wholesale buying agent for UK indie secondhand fashion retailers. " +
     "Given a store brief and a pre-ranked list of wholesale lots, write a confident, concise buyer's briefing (3-4 sentences). " +
-    "Reference the top pick, its ROI and budget fit. Do not invent lots or numbers beyond what is provided. British English, no markdown headers.";
+    "Reference the top pick, the recommended sourcing plan (spend, negotiated savings, landed profit) and one policy exclusion if present. Do not invent lots or numbers beyond what is provided. British English, no markdown headers.";
 
-  const user = JSON.stringify({ brief: dna.brief, dna, rankedLots: context }, null, 2);
+  const user = JSON.stringify({ brief: dna.brief, dna, rankedLots: context, sourcingPlan: planContext }, null, 2);
 
   try {
     const controller = new AbortController();

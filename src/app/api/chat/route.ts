@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Tell me about your store first." }, { status: 400 });
     }
 
-    const result = await runAgent(brief);
+    const result = await runAgent(brief, body?.policy);
     return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "The agent hit a snag. Try again." }, { status: 500 });

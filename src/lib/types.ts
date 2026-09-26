@@ -1,3 +1,5 @@
+import type { BuyingPolicy, ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
+
 export type Grade = "A" | "B" | "AB" | "Mixed";
 
 export type Category =
@@ -67,17 +69,30 @@ export interface LotEconomics {
 
 export interface AgentResult {
   dna: StoreDNA;
-  matches: LotScore[];
+  matches: ProcuredLot[];
+  plan: SourcingPlan;
+  policy: BuyingPolicy;
   summary: string;
   source: "llm" | "deterministic";
   llmModel?: string;
 }
 
+export interface OrderLine {
+  lotId: string;
+  title: string;
+  wholesaler: string;
+  listPrice: number;
+  price: number;
+  negotiated: boolean;
+}
+
 export interface Order {
   id: string;
-  lotId: string;
-  lotTitle: string;
-  wholesaler: string;
+  lines: OrderLine[];
+  rejected: { lotId: string; title: string; reason: string }[];
+  subtotalList: number;
+  savings: number;
+  shipping: number;
   amount: number;
   currency: "GBP";
   status: "confirmed";
