@@ -201,6 +201,7 @@ export default function LandingPage() {
                   <div className="text-2xl">{p.emoji}</div>
                   <div className="mt-2 font-semibold">{p.name}</div>
                   <div className="text-xs text-paper/55">{p.location}</div>
+                  <div className="mt-2 text-xs leading-snug text-paper/70">{p.blurb}</div>
                   <div className="mt-2 text-xs text-brand-300">
                     Budget {gbp(p.budget)}
                   </div>

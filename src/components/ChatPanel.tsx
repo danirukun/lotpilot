@@ -104,18 +104,32 @@ export function ChatPanel() {
           <p className="mt-1 text-xs text-paper/55">One click to load a store brief.</p>
           <div className="mt-3 space-y-2">
             {PERSONAS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => submit(p.brief)}
-                disabled={loading}
-                className="flex w-full items-center gap-3 rounded-xl border border-ink-line bg-ink/40 px-3 py-2 text-left transition hover:border-brand-500/60 hover:bg-ink/70 disabled:opacity-50"
-              >
-                <span className="text-xl">{p.emoji}</span>
-                <span>
-                  <span className="block text-sm font-medium">{p.name}</span>
-                  <span className="block text-xs text-paper/50">{p.location}</span>
-                </span>
-              </button>
+              <div key={p.id} className="relative">
+                <button
+                  onClick={() => submit(p.brief)}
+                  disabled={loading}
+                  title={p.brief}
+                  className="flex w-full items-start gap-3 rounded-xl border border-ink-line bg-ink/40 px-3 py-2 text-left transition hover:border-brand-500/60 hover:bg-ink/70 disabled:opacity-50"
+                >
+                  <span className="text-xl leading-6">{p.emoji}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{p.name}</span>
+                    <span className="block text-xs text-paper/50">{p.location}</span>
+                    <span className="mt-1 block text-xs leading-snug text-paper/70">{p.blurb}</span>
+                    {p.url && <span className="block h-4" aria-hidden />}
+                  </span>
+                </button>
+                {p.url && (
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute bottom-2 left-12 text-[11px] text-brand-300 hover:underline"
+                  >
+                    {new URL(p.url).hostname.replace(/^www\./, "")} ↗
+                  </a>
+                )}
+              </div>
             ))}
           </div>
         </div>
