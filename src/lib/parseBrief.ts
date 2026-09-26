@@ -89,15 +89,19 @@ export function parseBrief(brief: string): StoreDNA {
 }
 
 function parseBudget(brief: string): number | undefined {
-  const match = brief.match(/[£$]?\s?(\d[\d,]*)\s?(k|grand|thousand)?/i);
-  if (!match) return undefined;
-  const raw = Number(match[1].replace(/,/g, ""));
-  if (Number.isNaN(raw)) return undefined;
-  const unit = match[2]?.toLowerCase();
-  const value = unit === "k" || unit === "grand" || unit === "thousand" ? raw * 1000 : raw;
-  // Guard against picking up incidental small numbers or years.
-  if (value < 200 || (value > 1900 && value < 2030 && !/[£$]/.test(match[0]))) return undefined;
-  return value;
+  const candidates = [...brief.matchAll(/(?<![A-Za-z\d])([£$]?)\s?(\d[\d,]*(?:\.\d+)?)\s?(k|grand|thousand)?\b/gi)]
+    .map((m) => {
+      const raw = Number(m[2].replace(/,/g, ""));
+      const unit = m[3]?.toLowerCase();
+      const value = unit ? raw * 1000 : raw;
+      return { value, hasCurrency: m[1] !== "" || Boolean(unit) };
+    })
+    // Skip incidental small numbers ("18-25s") and bare years ("2000s").
+    .filter(
+      ({ value, hasCurrency }) =>
+        Number.isFinite(value) && value >= 200 && (hasCurrency || value < 1900 || value > 2030)
+    );
+  return (candidates.find((c) => c.hasCurrency) ?? candidates[0])?.value;
 }
 
 const KNOWN_PLACES = [
