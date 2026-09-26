@@ -1,6 +1,7 @@
 import type { BuyingPolicy, ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
 import type { StoreProfile } from "@/lib/store/types";
 import type { Rfq } from "@/lib/rfq/types";
+import type { WholesaleResearch } from "@/lib/wholesale/types";
 
 export type Grade = "A" | "B" | "AB" | "Mixed";
 
@@ -95,6 +96,8 @@ export interface AgentResult {
   /** Present when the run started from a store URL. */
   store?: StoreProfile;
   rfq: Rfq;
+  /** UK wholesale directory leads (The Wholesaler UK and live search). */
+  wholesale?: WholesaleResearch;
   /** Store persona detected from the brief, used for purchase history. */
   personaId?: string;
 }

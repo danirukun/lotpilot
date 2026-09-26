@@ -53,6 +53,10 @@ The retailer can paste a store URL instead of a brief. The engine is in `src/lib
 
 Completed profiles are cached under `.cache/store-profiles/` (override with `STORE_CACHE_DIR`) for 24 hours (`STORE_CACHE_TTL_MS`). Cache hits replay the same analysis so demo runs stay deterministic and skip live fetch / Tavily / Places. Pass `{ refresh: true }` on `/api/store` or `/api/chat` to force a fresh read.
 
+## UK wholesale index research
+
+Each agent run also researches real UK wholesale directories. The seeded index maps store DNA to categories on [The Wholesaler UK](https://www.thewholesaler.co.uk/) (clothing, footwear, football, electronics, and more). When `TAVILY_API_KEY` is set, Tavily searches `thewholesaler.co.uk` and merges live hits. Results appear in the demo as **UK wholesale index** leads. Research caches under `.cache/wholesale-research/`.
+
 ### Sources
 
 The engine reads these sources in this order:

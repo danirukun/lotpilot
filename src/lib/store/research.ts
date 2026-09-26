@@ -27,7 +27,11 @@ export function researchAvailable(): boolean {
 }
 
 /** Tavily Search API. Returns null on any failure so callers stay offline-safe. */
-export async function tavilySearch(query: string, timeoutMs = 7000): Promise<TavilyResponse | null> {
+export async function tavilySearch(
+  query: string,
+  timeoutMs = 7000,
+  opts: { includeDomains?: string[]; maxResults?: number } = {}
+): Promise<TavilyResponse | null> {
   const key = process.env.TAVILY_API_KEY;
   if (!key) return null;
   const controller = new AbortController();
@@ -37,7 +41,13 @@ export async function tavilySearch(query: string, timeoutMs = 7000): Promise<Tav
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ query, search_depth: "basic", max_results: MAX_SOURCES, include_answer: true })
+      body: JSON.stringify({
+        query,
+        search_depth: "basic",
+        max_results: opts.maxResults ?? MAX_SOURCES,
+        include_answer: true,
+        ...(opts.includeDomains?.length ? { include_domains: opts.includeDomains } : {})
+      })
     });
     if (!res.ok) return null;
     return (await res.json()) as TavilyResponse;

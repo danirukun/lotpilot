@@ -7,6 +7,7 @@ import { PolicyPanel } from "@/components/PolicyPanel";
 import { RfqSummaryCard } from "@/components/RfqSummaryCard";
 import { SourcingPlanCard } from "@/components/SourcingPlanCard";
 import { StoreProfileCard } from "@/components/StoreProfileCard";
+import { WholesaleResearchCard } from "@/components/WholesaleResearchCard";
 import { PERSONAS } from "@/data/personas";
 import { DEMO_STORE_URLS } from "@/data/storeFixtures";
 import { LOTS } from "@/data/lots";
@@ -319,6 +320,10 @@ function AgentMessage({
       {result.store && <StoreProfileCard store={result.store} />}
 
       {result.rfq && <RfqSummaryCard rfq={result.rfq} onEdit={onEditRfq} disabled={disabled} />}
+
+      {result.wholesale && result.wholesale.leads.length > 0 && (
+        <WholesaleResearchCard research={result.wholesale} />
+      )}
 
       <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
