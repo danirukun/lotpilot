@@ -9,10 +9,6 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <nav className="flex items-center gap-2 sm:gap-3">
-          <span className="chip hidden sm:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-            Agentic Commerce
-          </span>
           <Link href="/#how" className="btn-ghost hidden sm:inline-flex">
             How it works
           </Link>
