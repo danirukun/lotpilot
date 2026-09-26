@@ -21,9 +21,17 @@ export function SourcingPlanCard({
     <div className="card animate-fade-up p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <span className="label-eyebrow">Strategic sourcing plan</span>
+          <span className="label-eyebrow">
+            {plan.exploratory ? "Exploratory sample (weak store fit)" : "Strategic sourcing plan"}
+          </span>
           <h3 className="mt-1 font-display text-xl">
-            {empty ? "No lot clears your policy" : `Opening buy: ${plan.lines.length} lots`}
+            {empty
+              ? plan.exploratory
+                ? "No fashion sample clears policy"
+                : "No lot clears your policy"
+              : plan.exploratory
+                ? `Sample buy: ${plan.lines.length} lot${plan.lines.length > 1 ? "s" : ""}`
+                : `Opening buy: ${plan.lines.length} lots`}
           </h3>
           <p className="text-xs text-paper/55">
             Budget {gbp(plan.budget)}

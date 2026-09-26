@@ -145,6 +145,8 @@ export interface Exclusion {
 export interface SourcingPlan {
   budget: number;
   budgetAssumed: boolean;
+  /** Weak non-fashion store fit: tiny sample buy only, not a full opening order. */
+  exploratory?: boolean;
   lines: PlanLine[];
   totalList: number;
   totalSpend: number;

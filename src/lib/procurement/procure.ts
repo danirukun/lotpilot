@@ -113,12 +113,21 @@ function firstFailure(p: ProcuredLot): string {
  * score within budget, while respecting supplier-concentration and
  * category-diversification caps. Prices are post-negotiation estimates.
  */
+export interface SourcingPlanOptions {
+  maxLines?: number;
+  minFit?: number;
+  exploratory?: boolean;
+}
+
 export function buildSourcingPlan(
   candidates: ProcuredLot[],
   policy: BuyingPolicy,
   budget: number,
-  budgetAssumed: boolean
+  budgetAssumed: boolean,
+  opts: SourcingPlanOptions = {}
 ): SourcingPlan {
+  const minFit = opts.minFit ?? 50;
+  const maxLines = opts.maxLines ?? Infinity;
   const excluded: Exclusion[] = [];
   const chosen: ProcuredLot[] = [];
   const supplierSpend = new Map<string, number>();
@@ -137,12 +146,16 @@ export function buildSourcingPlan(
       continue;
     }
     if (p.rfq?.hardMiss) {
-      exclude(p, `Outside your RFQ: ${p.rfq.hardMiss.label.toLowerCase()} (${p.rfq.hardMiss.detail})`);
+      exclude(p, `Outside your quote request: ${p.rfq.hardMiss.label.toLowerCase()} (${p.rfq.hardMiss.detail})`);
       continue;
     }
     const fit = p.rfq?.gate ?? p.score;
-    if (fit < 50) {
+    if (fit < minFit) {
       exclude(p, `Weak store fit (${fit}/100)`);
+      continue;
+    }
+    if (chosen.length >= maxLines) {
+      exclude(p, "Exploratory plan capped at " + maxLines + " lots");
       continue;
     }
     if ((categoryLots.get(lot.category) ?? 0) >= policy.maxLotsPerCategory) {
@@ -210,6 +223,7 @@ export function buildSourcingPlan(
   return {
     budget,
     budgetAssumed,
+    ...(opts.exploratory ? { exploratory: true } : {}),
     lines,
     totalList,
     totalSpend,

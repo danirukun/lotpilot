@@ -1,6 +1,6 @@
 # LotPilot
 
-**LotPilot is an AI wholesale buying agent for UK indie fashion retailers.** Describe your shop and set your buying rules. The agent finds matching wholesale lots, checks them against your policy, negotiates the price, and completes the buy.
+**LotPilot is an AI wholesale buying agent for independent UK retailers** who run their own physical shop and online store. They buy secondhand and vintage stock across many wholesalers — not through one marketplace. Describe your shop and set your buying rules. The agent finds matching wholesale lots, checks them against your policy, negotiates the price, and completes the buy.
 
 ## Overview
 
@@ -17,21 +17,21 @@ The retailer types a short brief in chat. For example: "Y2K thrift shop in Shore
 
 LotPilot runs fully offline. It needs no paid API keys. Deterministic code does all ranking, policy checks, negotiation, and economics. An optional language model only writes the summary text.
 
-## Track and venue
+## Hackathon track
 
 - **Track:** Agentic Commerce.
-- **Venue:** [Fleek](https://www.wearefleek.com/). Fleek is a B2B wholesale marketplace. It connects retailers with vintage and secondhand wholesalers. It is not a consumer resale app.
 
-LotPilot acts as the retailer's procurement agent on this kind of marketplace. It turns a plain-language brief and a set of rules into a negotiated, placed order.
+LotPilot acts as the retailer's procurement agent. It turns a plain-language brief, an optional quote request (RFQ), and a set of rules into a negotiated, placed order.
 
 ## Features
 
 - **Chat brief.** The retailer describes the shop in free text.
 - **Store URL analysis.** The retailer pastes a store URL. The agent reads the store and builds the store DNA, a size estimate, and a budget. See [Store feature extraction](#store-feature-extraction).
-- **Store personas.** Five preset shops let a presenter skip typing.
+- **Store personas.** Seven preset shops let a presenter skip typing.
+- **RFQ-lite matching.** The agent parses piece counts, price caps, grade preference, and brand hints from the brief. It ranks lots on how well they meet the RFQ, not just store vibe. See [RFQ matching](#rfq-matching).
 - **Deterministic matcher.** The agent parses the brief into store DNA. It scores every lot on aesthetic, category, brand, era, grade, and budget.
 - **Buying policy engine.** The retailer sets rules in the sidebar. Each lot gets a verdict: compliant, negotiate, or blocked. Each card lists every rule with its result.
-- **Supplier scorecards.** Each wholesaler has a score from 0 to 100. The score uses rating, on-time rate, grade accuracy, dispute rate, and lead time.
+- **Supplier scorecards.** Each wholesaler has a 0–100 score on reliability, grade consistency, fill rate, and QC/return risk. See [Supplier scorecards](#supplier-scorecards).
 - **Market benchmarks.** Each lot has a 90-day comparable price per piece. The card shows the price against the market.
 - **Total cost of ownership.** Landed cost includes shipping. Landed profit includes the expected loss from grade misdeclaration.
 - **Risk score.** Each lot has a low, medium, or high risk level. The level uses quality, grade, overpricing, disputes, lead time, and sell-through.
@@ -82,7 +82,61 @@ A store URL run uses the suggested budget.
 
 The classifier uses weighted keywords from the name, SEO data, categories, product feed, and web research. Maps store types add more weight. The classes are: clothing, footwear, accessories, electronics, home, beauty, books and media, toys and games, sports and outdoor, food and drink, and general.
 
-The wholesale catalog is secondhand fashion. If the store is not clothing, footwear, accessories, or general, the agent still returns results. But the summary and the profile card say that the matches are weak.
+The wholesale catalog is secondhand fashion. If the store is not clothing, footwear, accessories, or general, the agent still shows sample lot cards. The summary and the profile card say that the catalog is fashion and the matches are weak. The agent does not build a full opening buy. It uses at most a £500 exploratory cap and zero to two lots, or no plan if nothing clears policy.
+
+## RFQ matching
+
+The RFQ engine lives in `src/lib/rfq/`. `resolveRfq` merges store DNA with a deterministic parser (`parse.ts`) and an optional LLM parser when a key is set.
+
+### Supported phrases
+
+The deterministic parser reads:
+
+- **Piece count:** ranges like `80-120`, `30 to 50`, or `100+ pieces`.
+- **Price per piece:** `max £12 a piece`, `under £30 per piece`, `£12/pc`, `12pp`.
+- **Budget:** `budget £2k`, `£2500`, or `2 grand` when tied to the buy.
+- **Grades:** `grade A or B`, `A/B grades`, `grade A only`, `A+` / `or better`, and `grade A preferred`.
+- **Brands:** names from the shared brand dictionary (for example Levi's, Wrangler, adidas).
+
+The chat UI shows a one-line summary, for example: `80–120 Y2K tops, grade A/B, ≤£12/pc, budget £2k`. The retailer can edit the RFQ and re-run.
+
+### Grade A/B/C mapping
+
+Retailers speak in letters A, B, and C. The catalog uses grades A, AB, B, and Mixed.
+
+| Letter | Catalog grades accepted |
+| --- | --- |
+| A | A |
+| B | AB, B |
+| C | Mixed |
+
+`lettersToGrades` keeps catalog grades in best-to-worst order: A, AB, B, Mixed. Ranking uses the worst accepted letter as the grade floor when the RFQ sets grades.
+
+### Scoring and ranking
+
+`scoreRfq` scores style, piece count, price per piece, grade, brands, and budget fit. Each check has a weight (style 30%, price 25%, pieces 20%, grade 20%, brands 15%, budget 10%). The RFQ score blends with store fit; explicit constraints increase the RFQ weight.
+
+`selectCandidates` in `rank.ts` scores the full catalog, then sorts by RFQ relevance plus a supplier pull (±0.2 points per scorecard point around 85) and a key-supplier boost. Lots with a hard RFQ miss are excluded from the sourcing plan.
+
+### UI
+
+- **RfqSummaryCard** — RFQ line, chips, and optional edit form.
+- **LotCard** — RFQ match %, expandable RFQ checks, supplier score with expandable scorecard, and key-supplier label.
+
+## Supplier scorecards
+
+Scorecards are in `src/data/supplierScorecards.ts`. `scoreSupplier` in `policy.ts` builds the overall score:
+
+| Dimension | Share of overall score |
+| --- | --- |
+| Reliability (on-time delivery) | 30% |
+| Grade consistency (grade accuracy) | 30% |
+| Fill rate | 20% |
+| QC/return safety (from dispute risk) | 20% |
+
+The overall score is 0–100 with bands A–D. `withPurchaseHistory` marks **key suppliers** when the active persona has past orders with that wholesaler.
+
+Ranking uses supplier score in three places: candidate selection (pull and tie-break), decision score (25%), and plan line display. Key suppliers get a small boost in ranking and decision score.
 
 ## Procurement model
 
@@ -118,9 +172,9 @@ A hard rule blocks the lot when it fails. A price rule is "negotiable" when the 
 | Price vs market | Price per piece ÷ 90-day comparable price per piece |
 | Landed cost | Price + shipping |
 | Landed ROI | (Revenue after grade-accuracy loss − landed cost) ÷ landed cost |
-| Supplier score | 25% rating, 25% on-time, 30% grade accuracy, 10% disputes, 10% lead time |
+| Supplier score | 30% reliability, 30% grade consistency, 20% fill rate, 20% QC/return safety |
 | Risk score | Quality, grade, overpricing, disputes, lead time, and sell-through |
-| Decision score | 50% fit, 20% supplier, 15% value vs market, 15% inverse risk |
+| Decision score | 45% RFQ/store relevance, 25% supplier, 15% value vs market, 15% inverse risk (plus key-supplier boost) |
 
 ### Negotiation
 
@@ -188,31 +242,36 @@ Then add one key and restart the server.
 ## Architecture
 
 1. **Parse the brief.** `src/lib/parseBrief.ts` reads the free text. It extracts aesthetics, categories, brands, decades, budget, location, and a grade floor. For a store URL, `src/lib/store/extract.ts` builds the DNA from the store instead.
-2. **Rank the lots.** `src/lib/matcher.ts` scores each lot against the store DNA and returns the top candidates with fit reasons.
-3. **Procure.** `src/lib/procurement/procure.ts` adds the supplier scorecard, market benchmark, landed economics, risk, decision score, and policy verdict to each candidate.
-4. **Plan.** `buildSourcingPlan` in the same file selects the opening buy. It uses negotiated price estimates.
+2. **Resolve the RFQ.** `src/lib/rfq/resolve.ts` merges DNA with parsed or edited RFQ fields.
+3. **Rank and procure.** `src/lib/rfq/rank.ts` scores the catalog on RFQ fit and supplier score, then `procure.ts` adds benchmarks, landed economics, risk, decision score, and policy verdict.
+4. **Plan.** `buildSourcingPlan` selects the opening buy with negotiated price estimates. Non-fashion stores get an exploratory cap only.
 5. **Summarise.** `src/lib/agent.ts` builds the result. If an LLM key is present, `src/lib/llm.ts` writes the narration. If not, `src/lib/summary.ts` writes a canned but specific summary.
 6. **Negotiate and check out.** `src/lib/checkout.ts` negotiates the basket against the policy and builds the order.
 
 API routes:
 
-- `POST /api/chat` — takes `{ brief, policy? }` or `{ storeUrl, policy? }`. Returns the store DNA, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
+- `POST /api/chat` — takes `{ brief, policy?, rfq? }` or `{ storeUrl, policy? }`. Returns store DNA, RFQ, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
 - `POST /api/store` — takes `{ url }`. Returns the store profile. Returns 400 for a URL that is not public.
 - `POST /api/negotiate` — takes `{ lotIds, policy?, budget? }`. Returns one negotiation transcript per lot.
 - `POST /api/checkout` — takes `{ lotIds, policy?, budget?, negotiate? }`. Negotiates again on the server and returns a confirmed order.
 
 Seed data:
 
-- `src/data/lots.ts` — 32 wholesale lots with grade, piece count, wholesale price, resale price, and sell-through.
-- `src/data/suppliers.ts` — 9 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
+- `src/data/lots.ts` — 43 wholesale lots with grade, piece count, wholesale price, resale price, and sell-through.
+- `src/data/suppliers.ts` — 10 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
 - `src/data/benchmarks.ts` — 90-day comparable price per piece for each lot.
-- `src/data/personas.ts` — 5 store personas.
+- `src/data/personas.ts` — 7 store personas.
+- `src/data/supplierScorecards.ts` — reliability, grade consistency, fill rate, and QC metrics per supplier.
+- `src/data/purchaseHistory.ts` — key-supplier purchase history per persona.
 
 UI:
 
 - `src/app/page.tsx` — the landing page.
 - `src/app/demo/page.tsx` — the live agent page.
-- `src/components/ChatPanel.tsx` — the chat, personas, and policy wiring.
+- `src/components/ChatPanel.tsx` — the chat, personas, RFQ edit, and policy wiring.
+- `src/components/RfqSummaryCard.tsx` — RFQ summary and edit form.
+- `src/components/RfqChecks.tsx` — per-lot RFQ check list.
+- `src/components/SupplierScorecard.tsx` — supplier score badge and expandable dimensions.
 - `src/components/PolicyPanel.tsx` — the buying policy editor.
 - `src/components/SourcingPlanCard.tsx` — the plan KPIs, supplier mix, and exclusions.
 - `src/components/StoreProfileCard.tsx` — the store profile: vertical, size, Maps listing, search snippet, categories, DNA, and sources.
@@ -223,17 +282,17 @@ UI:
 
 Use this script for a live presentation. The sample lines are for the presenter to read.
 
-1. **Open the app (0:00).** Go to http://localhost:3000. Say: "This is LotPilot. It is an AI procurement agent for indie vintage shops that buy on wholesale marketplaces like Fleek."
-2. **Go to the live agent (0:15).** Click "Launch agent". Say: "No sign-up. The retailer describes the shop. The sidebar holds the buying policy: the rules the agent must obey."
-3. **Run a persona (0:30).** Click "Neon Rewind", the Shoreditch Y2K shop. Say: "This is a Y2K thrift store in Shoreditch with a £2000 budget."
-4. **Show the sourcing plan (0:45).** Point at the "Strategic sourcing plan" card. Say: "The agent built an opening buy of three lots from two suppliers. It costs £1,790 after negotiation, which is £150 under list. It projects about £1,650 landed profit."
-5. **Show the exclusions (1:05).** Point at the exclusion list. Say: "It left out the low-rise denim because it would put too much spend with one supplier. It blocked the designer denim because it costs 18% above the market."
-6. **Show a lot card (1:20).** Point at the top card, the Y2K Baby Tees Bundle. Say: "Each lot shows fit, the supplier score, landed ROI, price against 90-day comparables, and risk." Open "Policy checks". Say: "Every rule is visible. There is no black box."
-7. **Negotiate (1:40).** Click "Negotiate" on the top card. Say: "Now the agent negotiates for us. It opens with market comparables, then offers early payment. It never goes above our walk-away price." Wait for the deal at £495.
-8. **Place the order (2:10).** Click "Place order". Say: "The order is confirmed at £495 instead of £540. The server recomputes the negotiated price, so the client cannot fake it."
-9. **Change the policy (2:25).** Close the modal. In the policy panel, set "Min grade" to "Grade A" and "Max lot price" to 600. Click "Re-run buy". Say: "Tighter rules give a different buy. The agent tells us exactly which rule blocks each lot."
-10. **Optional: analyse a store URL.** In the "Analyse a store URL" card, click `neonrewind.co.uk`. Say: "The agent reads the store page, its SEO tags, its categories, and its Google Maps listing. It sees a small Y2K clothing shop and sets a £2,500 budget." Point at the store profile card. Then click `gadgetgrid.co.uk`. Say: "This store sells refurbished electronics. The agent classifies it as electronics and tells us that a fashion catalog is a weak match."
-11. **Close (2:45).** Say: "LotPilot turns a brief and a policy into a negotiated, placed order in seconds. The ranking, policy, and negotiation are deterministic and auditable. The optional language model only writes the summary."
+1. **Open the app (0:00).** Go to http://localhost:3000. Say: "This is LotPilot. It is an AI buying agent for independent UK retailers who run a shop and a website and buy vintage stock from many wholesalers."
+2. **Go to the live agent (0:15).** Click "Launch agent". Say: "No sign-up. The retailer describes the shop. The sidebar holds the buying policy."
+3. **Neon Rewind persona (0:25).** Click "Neon Rewind". Say: "Y2K thrift in Shoreditch, £2000 budget." Point at the RFQ line. Say: "The agent turned the brief into a quote request."
+4. **Sourcing plan (0:40).** Say: "Opening buy: three lots, £1,790 after negotiation, £150 under list. Top pick: Y2K Baby Tees Bundle from Rewind Bales — a key supplier."
+5. **Lot card (0:55).** Expand the supplier scorecard and RFQ checks. Say: "RFQ match, supplier score, policy checks — all visible."
+6. **Negotiate (1:10).** Click "Negotiate" on the top card. Say: "Market comparables, then early payment. Deal at £495, £45 under list."
+7. **RFQ-style brief (1:25).** Paste: `I need 80-120 Y2K tops, grade A or B, max £12 a piece, budget £2k`. Say: "Same shop DNA, but now the rank follows the RFQ: piece count, grade, and price cap." Point at `80–120 Y2K tops, grade A/B, ≤£12/pc, budget £2k`.
+8. **Classic Football Shirts (1:45).** Click that persona. Say: "Four lots, £2,880 spend, £260 saved. Top pick: 90s English League Football Shirts from Terrace Archive."
+9. **Policy tweak (2:00).** Set min grade to A and max lot price to £600. Re-run. Say: "Tighter rules change the buy. Each exclusion names the rule."
+10. **Store URLs (2:15).** Click `neonrewind.co.uk`. Say: "It reads SEO, categories, and Maps — small Y2K clothing, £2,500 budget." Click `gadgetgrid.co.uk`. Say: "Electronics store. The banner says the catalog is secondhand fashion. No full fashion plan — only weak matches."
+11. **Close (2:50).** Say: "Ranking, RFQ scoring, policy, and negotiation are deterministic. The optional LLM only writes the summary."
 
 ## Deployment
 

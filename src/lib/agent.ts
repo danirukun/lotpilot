@@ -50,7 +50,14 @@ export async function runAgentFromDna(
   const budget = rfq.budget ?? dna.budget ?? DEFAULT_BUDGET;
 
   const candidates = selectCandidates(dna, rfq, policy, budget, opts.personaId);
-  const plan = buildSourcingPlan(candidates, policy, budget, rfq.budget === undefined && dna.budget === undefined);
+  const budgetAssumed = rfq.budget === undefined && dna.budget === undefined;
+  const nonFashionStore = Boolean(store && !store.fashionFit);
+  const planBudget = nonFashionStore ? Math.min(budget, 500) : budget;
+  const plan = buildSourcingPlan(candidates, policy, planBudget, budgetAssumed, {
+    ...(nonFashionStore
+      ? { maxLines: 2, minFit: 55, exploratory: true }
+      : {})
+  });
   const matches = rankProcured(candidates).slice(0, 6);
 
   const base = {

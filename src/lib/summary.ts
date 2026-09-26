@@ -40,12 +40,21 @@ export function buildSummary(
   ];
 
   if (plan.lines.length > 0) {
+    const kind = plan.exploratory
+      ? `Exploratory fashion sample (weak store fit): ${plan.lines.length} lot${
+          plan.lines.length > 1 ? "s" : ""
+        }`
+      : `Recommended opening buy: ${plan.lines.length} lot${plan.lines.length > 1 ? "s" : ""}`;
     lines.push(
-      `Recommended opening buy: ${plan.lines.length} lot${plan.lines.length > 1 ? "s" : ""} from ${
-        plan.supplierMix.length
-      } supplier${plan.supplierMix.length > 1 ? "s" : ""} for ${gbp(plan.totalSpend)} after negotiation (${gbp(
-        plan.estimatedSavings
-      )} under list), projecting ${gbp(plan.expectedLandedProfit)} landed profit.`
+      `${kind} from ${plan.supplierMix.length} supplier${plan.supplierMix.length > 1 ? "s" : ""} for ${gbp(
+        plan.totalSpend
+      )} after negotiation (${gbp(plan.estimatedSavings)} under list), projecting ${gbp(
+        plan.expectedLandedProfit
+      )} landed profit.`
+    );
+  } else if (plan.exploratory) {
+    lines.push(
+      "No fashion lot clears policy for this store type. The catalog is secondhand clothing — treat any matches as weak."
     );
   } else {
     lines.push("No lot clears your policy yet. Loosen a rule in the policy panel and re-run.");

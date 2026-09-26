@@ -24,7 +24,12 @@ export function selectCandidates(
   personaId?: string,
   limit = 12
 ): ProcuredLot[] {
-  return rankLots(dna, LOTS.length)
+  const gradeFloor = rfq.grades.length
+    ? rfq.grades[rfq.grades.length - 1]
+    : rfq.source === "edited"
+      ? undefined
+      : dna.gradeFloor;
+  return rankLots({ ...dna, budget: rfq.budget ?? dna.budget, gradeFloor }, LOTS.length)
     .map((match) => {
       const rfqMatch = scoreRfq(match, rfq, policy);
       const supplier = withPurchaseHistory(scoreSupplier(supplierByName(match.lot.wholesaler)), personaId);
