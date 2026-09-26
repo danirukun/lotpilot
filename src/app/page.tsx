@@ -8,7 +8,7 @@ const STEPS = [
   {
     n: "01",
     title: "Learn your store DNA",
-    body: "Describe your shop in a sentence, paste a Shopify URL or pick a preset persona. LotPilot extracts aesthetic, categories, brands, era and budget."
+    body: "Describe your shop in a sentence, pick a persona, or paste your store URL. LotPilot reads the page, its SEO tags, your categories and your Google Maps listing, then extracts aesthetic, brands, era, store size and budget."
   },
   {
     n: "02",

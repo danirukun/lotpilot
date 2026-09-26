@@ -5,7 +5,9 @@ import { LotCard } from "@/components/LotCard";
 import { DealModal, type DealItem } from "@/components/DealModal";
 import { PolicyPanel } from "@/components/PolicyPanel";
 import { SourcingPlanCard } from "@/components/SourcingPlanCard";
+import { StoreProfileCard } from "@/components/StoreProfileCard";
 import { PERSONAS } from "@/data/personas";
+import { DEMO_STORE_URLS } from "@/data/storeFixtures";
 import { LOTS } from "@/data/lots";
 import { track } from "@/lib/analytics";
 import { DEFAULT_POLICY } from "@/lib/procurement/policy";
@@ -40,6 +42,8 @@ interface AgentTurn {
 }
 type Turn = UserTurn | AgentTurn;
 
+type AgentRequest = { brief: string } | { storeUrl: string };
+
 const SUGGESTIONS = [
   "I run a Y2K thrift shop in Shoreditch, £2000 budget.",
   "Vintage denim and workwear store in Leeds, budget £2500, Grade A.",
@@ -52,7 +56,7 @@ export function ChatPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [policy, setPolicy] = useState<BuyingPolicy>(DEFAULT_POLICY);
-  const [lastBrief, setLastBrief] = useState<string | null>(null);
+  const [lastRequest, setLastRequest] = useState<AgentRequest | null>(null);
   const [deal, setDeal] = useState<ActiveDeal | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
@@ -60,21 +64,33 @@ export function ChatPanel() {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
   }, [turns, loading]);
 
-  async function submit(brief: string) {
+  const submit = (brief: string) => {
     const clean = brief.trim();
-    if (!clean || loading) return;
-    setError(null);
+    if (!clean) return;
     setInput("");
-    setTurns((t) => [...t, { role: "user", text: clean }]);
-    setLastBrief(clean);
-    setLoading(true);
     track("brief_submitted", { length: clean.length });
+    return run({ brief: clean }, clean);
+  };
+
+  const analyseStore = (url: string) => {
+    const clean = url.trim();
+    if (!clean) return;
+    track("store_url_submitted", { url: clean });
+    return run({ storeUrl: clean }, `Analyse my store: ${clean}`);
+  };
+
+  async function run(request: AgentRequest, userText: string) {
+    if (loading) return;
+    setError(null);
+    setTurns((t) => [...t, { role: "user", text: userText }]);
+    setLastRequest(request);
+    setLoading(true);
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: clean, policy })
+        body: JSON.stringify({ ...request, policy })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Agent error");
@@ -135,21 +151,23 @@ export function ChatPanel() {
         </div>
 
         <div className="card p-4">
-          <h2 className="text-sm font-semibold">Infer from a store URL</h2>
+          <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
-            Paste a Shopify / store URL — the agent reads the handle for taste cues.
+            The agent reads the page SEO tags, categories and Google Maps listing, then sizes the store and
+            sets a budget.
           </p>
-          <ShopifyInput onInfer={submit} disabled={loading} />
+          <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>
 
         <PolicyPanel
           policy={policy}
           onChange={setPolicy}
-          canApply={Boolean(lastBrief) && !loading}
+          canApply={Boolean(lastRequest) && !loading}
           onApply={() => {
-            if (!lastBrief) return;
+            if (!lastRequest) return;
             track("policy_applied", { ...policy });
-            submit(lastBrief);
+            if ("storeUrl" in lastRequest) analyseStore(lastRequest.storeUrl);
+            else submit(lastRequest.brief);
           }}
         />
       </aside>
@@ -271,6 +289,8 @@ function AgentMessage({
         </div>
       </div>
 
+      {result.store && <StoreProfileCard store={result.store} />}
+
       <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
       {result.matches.length > 0 && (
@@ -291,40 +311,56 @@ function AgentMessage({
   );
 }
 
-function ShopifyInput({
-  onInfer,
+function StoreUrlInput({
+  onAnalyse,
   disabled
 }: {
-  onInfer: (brief: string) => void;
+  onAnalyse: (url: string) => void;
   disabled?: boolean;
 }) {
   const [url, setUrl] = useState("");
 
-  function infer() {
-    const handle = url
-      .replace(/^https?:\/\//, "")
-      .split(/[./]/)
-      .filter(Boolean)[0];
-    if (!handle) return;
-    const words = handle.replace(/[-_]/g, " ");
-    onInfer(
-      `Infer my store taste from my shop name "${words}". Suggest wholesale lots that match a vintage / secondhand fashion store with that vibe.`
-    );
+  function analyse(value = url) {
+    if (!value.trim() || disabled) return;
+    onAnalyse(value);
     setUrl("");
   }
 
   return (
-    <div className="mt-3 flex gap-2">
-      <input
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && infer()}
-        placeholder="yourstore.myshopify.com"
-        className="min-w-0 flex-1 rounded-lg border border-ink-line bg-ink px-3 py-2 text-xs text-paper placeholder:text-paper/40 focus:border-brand-500/60 focus:outline-none"
-      />
-      <button onClick={infer} disabled={disabled || !url.trim()} className="btn-ghost px-3 py-2 text-xs">
-        Infer
-      </button>
+    <div className="mt-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          analyse();
+        }}
+        className="flex gap-2"
+      >
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="yourstore.co.uk"
+          inputMode="url"
+          aria-label="Store URL"
+          className="min-w-0 flex-1 rounded-lg border border-ink-line bg-ink px-3 py-2 text-xs text-paper placeholder:text-paper/40 focus:border-brand-500/60 focus:outline-none"
+        />
+        <button type="submit" disabled={disabled || !url.trim()} className="btn-primary px-3 py-2 text-xs">
+          Analyse
+        </button>
+      </form>
+      <div className="mt-2.5 text-[10px] uppercase tracking-wide text-paper/40">Demo stores</div>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {DEMO_STORE_URLS.map((demo) => (
+          <button
+            key={demo}
+            type="button"
+            onClick={() => analyse(demo)}
+            disabled={disabled}
+            className="chip py-0.5 transition hover:border-brand-500/60 hover:text-brand-200 disabled:opacity-50"
+          >
+            {demo}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
