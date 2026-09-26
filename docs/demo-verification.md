@@ -47,13 +47,13 @@ npm run dev
 
 The database security advisor returned no findings; the directory has one public SELECT policy and no public write policies. No local Supabase stack was needed for these changes.
 
-Final checks: 12 automated regression tests passed, ESLint passed without warnings, TypeScript passed, and the Next.js production build passed. Building requires network access to download the configured Google Fonts. A separate `.next-build` output directory was used while the local development server was running.
+Final checks: 13 automated regression tests passed, ESLint passed without warnings, TypeScript passed, and the Next.js production build passed. Building requires network access to download the configured Google Fonts. A separate `.next-build` output directory was used while the local development server was running.
 
 The complete HTTP flow returned six relevant, unique supplier/category leads. The measured denim run emitted its first chunk at 543 ms and completed in 1,469 ms; these are single development-server measurements, not a latency guarantee. MAXGRG live analysis completed in 749 ms; the GadgetGrid fixture + live directory flow completed in 247 ms.
 
 The connected browser reported no available browser. The demo page's server render, API integration and production compilation were checked; a visual/click-through browser review remains outstanding.
 
-An independent code review found no blocking regressions. Its RFQ finding was fixed: changing requested categories or brands now changes supplier research too. One retrieval limit remains: the app filters the RPC's best 30 results by vertical and lexical evidence. A larger or less balanced index should move those filters into SQL before ranking/limiting so relevant records outside that shortlist cannot be missed.
+Independent code reviews found no blocking regressions. RFQ findings were fixed: changing requested categories or brands now changes supplier research too, and storefront-extracted brands survive RFQ resolution unless explicitly overridden. One retrieval limit remains: the app filters the RPC's best 30 results by vertical and lexical evidence. A larger or less balanced index should move those filters into SQL before ranking/limiting so relevant records outside that shortlist cannot be missed.
 
 ## Three-minute demo
 

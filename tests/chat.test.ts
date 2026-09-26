@@ -2,6 +2,7 @@ import "./setup";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { POST } from "../src/app/api/chat/route";
+import { runAgentForStore, runAgentFromDna } from "../src/lib/agent";
 
 test("chat streams real stages before a complete offline result", async () => {
   const response = await POST(new Request("http://localhost/api/chat", {
@@ -37,4 +38,18 @@ test("editing requested categories and brands also changes supplier research", a
   assert.match(result.wholesale.query, /knitwear/);
   assert.match(result.wholesale.query, /carhartt/);
   assert.doesNotMatch(result.wholesale.query, /denim|nike/i);
+});
+
+test("storefront brands survive RFQ resolution and can still be explicitly cleared", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response("Store unavailable", { status: 503 });
+  try {
+    const result = await runAgentForStore("https://gadgetgrid.co.uk/", undefined, { refresh: true });
+    assert.equal(result.store?.fetch.mode, "fixture");
+    assert.deepEqual(result.rfq.brands, ["Apple", "Sony", "Dell"]);
+    assert.match(result.wholesale!.query, /apple OR sony/);
+    const cleared = await runAgentFromDna(result.dna, undefined, result.store, { rfq: { brands: [] } });
+    assert.deepEqual(cleared.rfq.brands, []);
+    assert.doesNotMatch(cleared.wholesale!.query, /apple|sony|dell/);
+  } finally { globalThis.fetch = original; }
 });
