@@ -3,7 +3,7 @@
 import { gbp } from "@/lib/format";
 import type { MapsListing, StoreProfile } from "@/lib/store/types";
 
-const MODE_LABEL: Record<StoreProfile["fetch"]["mode"], string> = {
+export const MODE_LABEL: Record<StoreProfile["fetch"]["mode"], string> = {
   live: "Live fetch",
   fixture: "Demo snapshot",
   offline: "Offline"
@@ -121,6 +121,11 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
             )}
             {maps?.source === "google-places" && (
               <span className="chip border-brand-500/40 py-0.5 text-brand-200">Google Places</span>
+            )}
+            {store.fetch.cached && (
+              <span className="chip py-0.5 text-paper/60" title={store.fetch.cachedAt}>
+                Cached
+              </span>
             )}
           </div>
         </div>

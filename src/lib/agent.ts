@@ -32,8 +32,12 @@ export async function runAgent(
 }
 
 /** Read a store URL, then buy for the extracted DNA with the size-based budget. */
-export async function runAgentForStore(storeUrl: string, policyInput?: unknown): Promise<AgentResult> {
-  const store = await extractStoreProfile(storeUrl);
+export async function runAgentForStore(
+  storeUrl: string,
+  policyInput?: unknown,
+  opts: { refresh?: boolean } = {}
+): Promise<AgentResult> {
+  const store = await extractStoreProfile(storeUrl, { refresh: opts.refresh });
   return runAgentFromDna({ ...store.dna, budget: store.size.suggestedBudget }, policyInput, store);
 }
 

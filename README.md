@@ -51,6 +51,8 @@ LotPilot acts as the retailer's procurement agent. It turns a plain-language bri
 
 The retailer can paste a store URL instead of a brief. The engine is in `src/lib/store/`. `extractStoreProfile(url)` in `extract.ts` returns a `StoreProfile`.
 
+Completed profiles are cached under `.cache/store-profiles/` (override with `STORE_CACHE_DIR`) for 24 hours (`STORE_CACHE_TTL_MS`). Cache hits replay the same analysis so demo runs stay deterministic and skip live fetch / Tavily / Places. Pass `{ refresh: true }` on `/api/store` or `/api/chat` to force a fresh read.
+
 ### Sources
 
 The engine reads these sources in this order:
@@ -270,8 +272,8 @@ Then add one key and restart the server.
 
 API routes:
 
-- `POST /api/chat` — takes `{ brief, policy?, rfq? }` or `{ storeUrl, policy? }`. Returns store DNA, RFQ, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
-- `POST /api/store` — takes `{ url }`. Returns the store profile. Returns 400 for a URL that is not public.
+- `POST /api/chat` — takes `{ brief, policy?, rfq? }` or `{ storeUrl, policy?, refresh? }`. Returns store DNA, RFQ, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
+- `POST /api/store` — takes `{ url, refresh? }`. Returns the store profile (cached by default). Returns 400 for a URL that is not public.
 - `POST /api/negotiate` — takes `{ lotIds, policy?, budget? }`. Returns one negotiation transcript per lot.
 - `POST /api/checkout` — takes `{ lotIds, policy?, budget?, negotiate? }`. Negotiates again on the server and returns a confirmed order.
 
