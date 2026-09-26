@@ -89,11 +89,11 @@ export async function generateLlmSummary(
   };
 
   const system =
-    "You are LotPilot, an expert wholesale buying agent for UK indie secondhand fashion retailers. " +
-    "Given a store brief and a pre-ranked list of wholesale lots, write a confident, concise buyer's briefing (3-4 sentences). " +
-    "Reference the top pick, the recommended sourcing plan (spend, negotiated savings, landed profit) and one policy exclusion if present. Do not invent lots or numbers beyond what is provided. British English, no markdown headers. " +
-    "If a store profile is given, it was read from the store's website; a short store read-out is already shown before your text, so do not repeat it. If fashionFit is false and the store is not electronics, say plainly that the matches are weak. For electronics stores, describe the refurbished tech plan confidently. " +
-    "If an RFQ is given, say how well the top pick meets it (rfqMatch percent) and mention a key supplier the retailer has bought from before.";
+    "You are LotPilot, a wholesale buying agent for UK indie secondhand fashion retailers. " +
+    "Given a store brief and a pre-ranked list of wholesale lots, write a buyer's briefing in 3-4 sentences. " +
+    "Name the top pick, the sourcing plan spend, negotiated savings, landed profit, and one policy exclusion if present. Do not invent lots or numbers. British English. No markdown headers. " +
+    "If a store profile is given, a short store read-out is already shown, so do not repeat it. If fashionFit is false and the store is not electronics, say the matches are weak. For electronics stores, describe the refurbished tech plan. " +
+    "If an RFQ is given, state how well the top pick meets it (rfqMatch percent) and name a key supplier the retailer has bought from before.";
 
   const user = JSON.stringify(
     { brief: dna.brief, dna, rfq: rfqContext, store: storeContext, rankedLots: context, sourcingPlan: planContext },

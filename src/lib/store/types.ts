@@ -104,5 +104,11 @@ export interface StoreProfile {
   dna: StoreDNA;
   brief: string;
   signals: StoreSignal[];
-  fetch: { mode: "live" | "fixture" | "offline"; notes: string[] };
+  fetch: {
+    mode: "live" | "fixture" | "offline";
+    notes: string[];
+    /** True when this profile was served from the storefront analysis cache. */
+    cached?: boolean;
+    cachedAt?: string;
+  };
 }

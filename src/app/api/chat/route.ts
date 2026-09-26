@@ -15,7 +15,9 @@ export async function POST(req: Request) {
       if (!normalizeUrl(storeUrl)) {
         return NextResponse.json({ error: "Enter a public store URL, e.g. neonrewind.co.uk" }, { status: 400 });
       }
-      return NextResponse.json(await runAgentForStore(storeUrl, body?.policy));
+      return NextResponse.json(
+        await runAgentForStore(storeUrl, body?.policy, { refresh: body?.refresh === true })
+      );
     }
 
     if (!brief.trim()) {
