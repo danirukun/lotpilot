@@ -198,7 +198,13 @@ export const STORE_FIXTURES: StoreFixture[] = [
   }
 ];
 
-export const DEMO_STORE_URLS = STORE_FIXTURES.map((f) => f.domains[0]);
+/** Chips on the demo page. Live-first extract hits the network; fixtures are fallback only. */
+export const DEMO_STORE_URLS = [
+  "neonrewind.co.uk",
+  "maxgrg.com",
+  "beyondretro.com",
+  "gadgetgrid.co.uk"
+];
 
 export const findFixture = (domain: string) =>
   STORE_FIXTURES.find((f) => f.domains.includes(domain.replace(/^www\./, "")));

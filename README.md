@@ -55,19 +55,19 @@ The retailer can paste a store URL instead of a brief. The engine is in `src/lib
 
 The engine reads these sources in this order:
 
-1. **Demo fixture.** Three demo stores have a built-in snapshot: `neonrewind.co.uk`, `loomandrivet.com`, and `gadgetgrid.co.uk`. The demo does not need the network for these stores.
-2. **Landing page.** The engine gets the page with a 6-second timeout and a 1.5 MB limit. It blocks private and local hosts.
-3. **Store name.** The engine uses `og:site_name`, the JSON-LD business name, or the title tag. It keeps the text before a separator such as " | " or " – ". If there is no page, it makes a name from the domain.
+1. **Live landing page.** The engine gets the page with a 6-second timeout and a 1.5 MB limit. It blocks private and local hosts.
+2. **Demo snapshot (fallback).** Three demo stores have a built-in snapshot: `neonrewind.co.uk`, `loomandrivet.com`, and `gadgetgrid.co.uk`. The engine uses a snapshot only when the live page cannot be fetched (for example `neonrewind.co.uk` has no public DNS).
+3. **Store name.** The engine uses `og:site_name`, the JSON-LD business name, a short brand segment of the title, or the domain.
 4. **SEO data.** The engine reads the title, meta description, keywords, OpenGraph tags, Twitter tags, the canonical link, the page language, and the JSON-LD types.
 5. **Categories.** The engine reads navigation links such as `/collections/` and `/product-category/`. On Shopify, it also reads the public `/collections.json` and `/products.json` feeds. It removes junk names, for example numbers, search pages, "All ..." pages, sale and gift pages, and names that repeat the brand. It prefers collections that have products.
 6. **Google Maps listing.** The engine tries these sources in this order:
    - The Google Places API (New), if `GOOGLE_MAPS_API_KEY` is set.
-   - The demo fixture.
    - Web research with Tavily, if `TAVILY_API_KEY` is set. The engine searches for the store name with "google maps reviews address". It reads the rating, the review count, the address, and the store types from the search snippets.
+   - The demo snapshot Maps listing, when the page came from a fixture.
    - The JSON-LD business data on the store page.
-7. **Web research.** Tavily results also go into the classifier with a low weight. Thus a store with a blocked page still gets a vertical and DNA. The profile keeps up to five sources. The engine does not use Tavily for demo stores, so the demo stays the same each time.
+7. **Web research.** When `TAVILY_API_KEY` is set, Tavily always runs — including for demo domains. Results go into the classifier and the store profile. Keep the key in `.env.local`.
 
-The engine ignores a failed source and continues. Every step works offline.
+The engine ignores a failed source and continues. Without keys, fixtures and JSON-LD still produce a full offline profile.
 
 ### Size buckets
 

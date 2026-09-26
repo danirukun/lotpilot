@@ -135,15 +135,17 @@ export function ChatPanel() {
       <aside className="order-2 space-y-4 lg:order-1">
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Store personas</h2>
-          <p className="mt-1 text-xs text-paper/55">One click to load a store brief.</p>
+          <p className="mt-1 text-xs text-paper/55">
+            Personas with a site run a live store analysis (page + Tavily when keyed). Others send a brief.
+          </p>
           <div className="mt-3 space-y-2">
             {PERSONAS.map((p) => (
               <div key={p.id}>
                 <button
                   type="button"
-                  onClick={() => submit(p.brief)}
+                  onClick={() => (p.url ? analyseStore(p.url) : submit(p.brief))}
                   disabled={loading}
-                  title={p.brief}
+                  title={p.url ? `Analyse ${p.url}` : p.brief}
                   className="flex w-full items-start gap-3 rounded-xl border border-ink-line bg-ink/40 px-3 py-2 text-left transition hover:border-brand-500/60 hover:bg-ink/70 disabled:opacity-50"
                 >
                   <span className="text-xl leading-6">{p.emoji}</span>
@@ -171,8 +173,8 @@ export function ChatPanel() {
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
-            The agent reads the page SEO tags, categories and Google Maps listing, then sizes the store and
-            sets a budget.
+            Live page fetch + Shopify feeds when public, Tavily web research when <code className="text-paper/70">TAVILY_API_KEY</code>{" "}
+            is set, Google Places when mapped. Demo domains fall back to a snapshot only if the live page fails.
           </p>
           <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>

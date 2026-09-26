@@ -1,5 +1,6 @@
 const MAX_BYTES = 1_500_000;
-const UA = "Mozilla/5.0 (compatible; LotPilotBot/1.0; +https://lotpilot.vercel.app)";
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 const PRIVATE_HOST =
   /^(localhost|0\.0\.0\.0|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$|.*\.(local|internal|localhost)$)/i;

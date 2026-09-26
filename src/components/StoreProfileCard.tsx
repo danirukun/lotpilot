@@ -97,6 +97,12 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
             >
               {MODE_LABEL[store.fetch.mode]}
             </span>
+            {research && research.sources.length > 0 && (
+              <span className="chip border-brand-500/40 py-0.5 text-brand-200">Tavily · {research.sources.length}</span>
+            )}
+            {maps?.source === "google-places" && (
+              <span className="chip border-brand-500/40 py-0.5 text-brand-200">Google Places</span>
+            )}
           </div>
         </div>
       </div>

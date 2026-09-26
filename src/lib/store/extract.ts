@@ -32,9 +32,33 @@ export function cleanName(raw: string | undefined): string | undefined {
   return first && first.length <= 60 ? first : undefined;
 }
 
-function nameFromSeo(parsed: ParsedPage | null): string | undefined {
-  return cleanName(parsed?.seo.ogSiteName) ?? cleanName(parsed?.business?.name) ?? cleanName(parsed?.seo.title);
+/** Prefer a brand-sized name over a long marketing title. */
+export function resolveStoreName(parsed: ParsedPage | null, domain: string): string {
+  const stem = domain.replace(/^www\./, "").split(".")[0];
+  const og = cleanName(parsed?.seo.ogSiteName);
+  if (og) return og;
+
+  const business = cleanName(parsed?.business?.name);
+  if (business) return business;
+
+  const title = parsed?.seo.title;
+  if (title) {
+    const parts = title
+      .split(/\s[|–—]\s|:\s/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const brandPart = [...parts].reverse().find((p) => p.length <= 28 && normToken(p).includes(normToken(stem)));
+    if (brandPart) return brandPart.length <= 40 ? brandPart : cleanName(brandPart) ?? brandPart;
+    const shortBrand = [...parts].reverse().find((p) => p.length <= 16 && /^[A-Z0-9]/.test(p));
+    if (shortBrand && parts.length > 1) return shortBrand;
+    const cleaned = cleanName(title);
+    if (cleaned && normToken(cleaned).includes(normToken(stem))) return cleaned;
+  }
+
+  return nameFromDomain(domain);
 }
+
+const normToken = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 export async function extractStoreProfile(input: string): Promise<StoreProfile> {
   const url = normalizeUrl(input);
@@ -49,30 +73,30 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   let parsed: ParsedPage | null = null;
   let catalog: CatalogData = EMPTY_CATALOG;
 
-  if (fixture) {
+  // Live-first: hit the real storefront when the network allows. Fixtures are fallback only.
+  const html = await fetchText(url.toString());
+  if (html) {
+    mode = "live";
+    parsed = parsePage(html, domain);
+    notes.push("Fetched the live landing page.");
+  } else if (fixture) {
     mode = "fixture";
     parsed = parsePage(fixture.html, domain);
-    notes.push("Demo store: page and catalog served from a built-in snapshot.");
+    notes.push("Live page unreachable. Using the built-in demo snapshot for HTML and catalog.");
   } else {
-    const html = await fetchText(url.toString());
-    if (html) {
-      mode = "live";
-      parsed = parsePage(html, domain);
-    } else {
-      notes.push(
-        `Could not fetch the landing page. Profile uses the store name${researchAvailable() ? " and web research" : ""} only.`
-      );
-    }
+    notes.push(
+      `Could not fetch the landing page. Profile uses the store name${researchAvailable() ? " and web research" : ""} only.`
+    );
   }
 
-  const name = nameFromSeo(parsed) ?? nameFromDomain(domain);
+  const name = resolveStoreName(parsed, domain);
   const locality = parsed?.business?.locality;
 
-  if (fixture?.shopify) {
-    catalog = fromShopifyFeeds({ collections: fixture.shopify.collections }, { products: fixture.shopify.products }, name);
-  } else if (!fixture && parsed?.platform === "shopify") {
+  if (mode === "live" && parsed?.platform === "shopify") {
     catalog = (await readShopifyCatalog(origin, name)) ?? EMPTY_CATALOG;
     if (catalog.productCount) notes.push("Read the public Shopify collection and product feeds.");
+  } else if (mode === "fixture" && fixture?.shopify) {
+    catalog = fromShopifyFeeds({ collections: fixture.shopify.collections }, { products: fixture.shopify.products }, name);
   }
 
   if (parsed && catalog.categories.length === 0) {
@@ -80,8 +104,8 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
     catalog = { ...catalog, categories: nav, collectionCount: nav.length || undefined };
   }
 
-  // Fixtures skip web research so the demo stays deterministic.
-  const useResearch = !fixture && researchAvailable();
+  // Real APIs whenever keys are set — including demo/fixture domains for the live hackathon path.
+  const useResearch = researchAvailable();
   const [placesListing, research] = await Promise.all([
     mapsAvailable() ? findMapsListing([name, locality].filter(Boolean).join(" ")) : Promise.resolve(null),
     useResearch ? researchStore(name, domain, locality, Boolean(parsed)) : Promise.resolve(null)
@@ -91,10 +115,13 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   if (mapsAvailable()) {
     notes.push(maps ? "Matched a Google Maps listing via the Places API." : "No Google Maps listing matched.");
   }
-  if (!maps && fixture?.maps) maps = fixture.maps;
   if (!maps && research?.listing) {
     maps = research.listing;
     notes.push("Built the location listing from web research snippets (Tavily). Check it before you rely on it.");
+  }
+  if (!maps && mode === "fixture" && fixture?.maps) {
+    maps = fixture.maps;
+    notes.push("Location listing taken from the demo snapshot (live Maps lookup missed).");
   }
   if (!maps) {
     maps = listingFromJsonLd(parsed?.business ?? null, name);
@@ -103,7 +130,7 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   if (useResearch) {
     notes.push(research ? `Web research (Tavily) found ${research.sources.length} sources.` : "Web research (Tavily) returned nothing.");
   }
-  if (!maps && !mapsAvailable() && !fixture) {
+  if (!maps && !mapsAvailable() && mode !== "fixture") {
     notes.push(
       researchAvailable()
         ? "No location listing found. Set GOOGLE_MAPS_API_KEY for a direct Google Maps lookup."

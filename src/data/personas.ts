@@ -42,6 +42,7 @@ export const PERSONAS: StorePersona[] = [
     location: "Shoreditch, London",
     budget: 2000,
     emoji: "\u{1F98B}",
+    url: "https://neonrewind.co.uk/",
     blurb: "Y2K thrift for 18-25s: baby tees, low-rise denim and going-out tops.",
     brief:
       "I run a Y2K thrift shop in Shoreditch. Baby tees, low-rise denim and going-out tops for 18-25s. Budget around \u00A32000."

@@ -70,14 +70,18 @@ export async function researchStore(
   const keys = [norm(name.replace(/\b(uk|ltd|limited|shop|store)\b/gi, "")), norm(domain.split(".")[0])].filter(
     (k) => k.length >= 4
   );
-  const relevant = responses
+  const answers = responses.map((r) => r.answer?.trim()).filter((a): a is string => Boolean(a));
+  const ranked = responses
     .flatMap((r) => r.results ?? [])
     .filter((r) => r.url && r.title)
-    .filter((r) => keys.some((k) => norm(`${r.title} ${r.content} ${r.url}`).includes(k)))
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  let relevant = ranked.filter((r) => keys.some((k) => norm(`${r.title} ${r.content} ${r.url}`).includes(k)));
+  // Accept the Tavily answer when it names the store even if individual hit URLs do not.
+  if (relevant.length === 0 && answers.some((a) => keys.some((k) => norm(a).includes(k)))) {
+    relevant = ranked.slice(0, MAX_SOURCES);
+  }
   // Without a result that names the store, the answer is a guess about some other business.
   if (relevant.length === 0) return null;
-  const answers = responses.map((r) => r.answer?.trim()).filter((a): a is string => Boolean(a));
 
   const seen = new Set<string>();
   const sources: ResearchSource[] = [];
