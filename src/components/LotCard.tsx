@@ -9,9 +9,9 @@ import type { PolicyStatus, ProcuredLot, RuleStatus } from "@/lib/procurement/ty
 export type LotCardLayout = "grid" | "list";
 
 export const STATUS_STYLE: Record<PolicyStatus, { label: string; className: string }> = {
-  compliant: { label: "Compliant", className: "bg-brand-500 text-ink" },
-  negotiate: { label: "Negotiate", className: "bg-accent-500 text-ink" },
-  blocked: { label: "Blocked", className: "bg-red-500 text-paper" }
+  compliant: { label: "Compliant", className: "bg-brand-500 text-onbrand" },
+  negotiate: { label: "Negotiate", className: "bg-accent-500 text-onbrand" },
+  blocked: { label: "Blocked", className: "bg-red-500 text-white" }
 };
 
 const RULE_ICON: Record<RuleStatus, { icon: string; className: string }> = {
@@ -64,7 +64,7 @@ export function LotCard({
         <img src={lot.image} alt={lot.title} className="h-28 w-full object-cover" loading="lazy" />
         <div className="absolute left-3 top-3 flex gap-2">
           {isTop && (
-            <span className="rounded-full bg-accent-500 px-2 py-1 text-xs font-bold text-ink">
+            <span className="rounded-full bg-accent-500 px-2 py-1 text-xs font-bold text-onbrand">
               Top pick
             </span>
           )}
@@ -173,7 +173,7 @@ function LotListRow({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={lot.image} alt={lot.title} className="h-full w-full object-cover" loading="lazy" />
           {isTop && (
-            <span className="absolute left-2 top-2 rounded-full bg-accent-500 px-2 py-0.5 text-[10px] font-bold text-ink">
+            <span className="absolute left-2 top-2 rounded-full bg-accent-500 px-2 py-0.5 text-[10px] font-bold text-onbrand">
               Top
             </span>
           )}

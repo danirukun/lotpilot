@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function SiteHeader() {
   return (
@@ -9,6 +10,7 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <nav className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <Link href="/#how" className="btn-ghost hidden sm:inline-flex">
             How it works
           </Link>

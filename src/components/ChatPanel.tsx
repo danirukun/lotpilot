@@ -429,7 +429,7 @@ function Dot({ delay = "0s" }: { delay?: string }) {
 function AgentAvatar({ large }: { large?: boolean }) {
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-xl bg-brand-500 text-ink shadow-glow ${
+      className={`grid shrink-0 place-items-center rounded-xl bg-brand-500 text-onbrand shadow-glow ${
         large ? "h-12 w-12" : "h-9 w-9"
       }`}
     >

@@ -96,7 +96,7 @@ function LayoutButton({
       aria-label={label}
       title={label}
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold transition ${
-        active ? "bg-brand-500 text-ink" : "text-paper/55 hover:text-paper/85"
+        active ? "bg-brand-500 text-onbrand" : "text-paper/55 hover:text-paper/85"
       }`}
     >
       {children}
