@@ -6,6 +6,15 @@ export function gbp(n: number): string {
   }).format(n);
 }
 
+export function gbp2(n: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(n);
+}
+
 export function pct(n: number): string {
   return `${Math.round(n)}%`;
 }
