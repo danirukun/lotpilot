@@ -12,18 +12,18 @@ const STEPS = [
   },
   {
     n: "02",
-    title: "Search the wholesale floor",
-    body: "It scans the Fleek-style catalog of graded secondhand lots and ranks them on fit, plus projected margin from resale price and sell-through."
+    title: "Source strategically",
+    body: "It ranks every lot on store fit, supplier scorecard, 90-day market comparables and landed ROI after shipping and grade risk. Then it builds a diversified opening buy."
   },
   {
     n: "03",
-    title: "Score fit and margin",
-    body: "Every lot gets a fit score, a projected ROI and a plain-English reason. No black box — you see why each lot made the cut."
+    title: "Enforce your buying policy",
+    body: "You set the rules: min and max price per lot, price per piece, grade, sell-through, ROI floor and supplier concentration. Every lot shows which rules pass."
   },
   {
     n: "04",
-    title: "Complete the buy",
-    body: "Confirm a lot and the agent runs a programmatic wholesale checkout, returning an order confirmation. Ready to wire to Commerce Layer."
+    title: "Negotiate and buy",
+    body: "The agent negotiates with each wholesaler, using market comps, early payment and volume bundles. It never goes above your walk-away price. Then it places the order."
   }
 ];
 
@@ -48,8 +48,8 @@ export default function LandingPage() {
             </h1>
             <p className="mt-5 max-w-xl text-lg text-paper/70">
               LotPilot is a wholesale buying agent for UK indie retailers. Tell it your
-              store DNA — it finds matching secondhand lots on the wholesale floor, scores
-              fit and margin, and completes the purchase.
+              store DNA and your buying policy. It finds matching secondhand lots, scores
+              fit, margin and supplier risk, negotiates the price and completes the purchase.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/demo" className="btn-primary px-6 py-3 text-base">
@@ -91,7 +91,10 @@ export default function LandingPage() {
                   60 pieces · Grade A · {gbp(540)} · ~108% projected ROI
                 </p>
               </div>
-              <Bubble who="agent">Confirm and I&apos;ll place the buy.</Bubble>
+              <Bubble who="agent">
+                Negotiated with Rewind Bales: {gbp(540)} → {gbp(495)} using market comps and
+                early payment. Inside your policy. Place the order?
+              </Bubble>
             </div>
           </div>
         </div>
@@ -106,7 +109,7 @@ export default function LandingPage() {
           />
           <Positioning
             title="An agent, not a catalog"
-            body="LotPilot doesn't just list lots. It reasons about your store, ranks by fit and projected profit, and can transact end-to-end."
+            body="LotPilot doesn't just list lots. It reasons about your store, obeys your procurement policy, negotiates on your behalf and transacts end-to-end."
           />
           <Positioning
             title="Built on Fleek"

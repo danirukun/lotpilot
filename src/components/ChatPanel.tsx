@@ -2,10 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LotCard } from "@/components/LotCard";
-import { CheckoutModal } from "@/components/CheckoutModal";
+import { DealModal, type DealItem } from "@/components/DealModal";
+import { PolicyPanel } from "@/components/PolicyPanel";
+import { SourcingPlanCard } from "@/components/SourcingPlanCard";
 import { PERSONAS } from "@/data/personas";
+import { LOTS } from "@/data/lots";
 import { track } from "@/lib/analytics";
-import type { AgentResult, LotScore } from "@/lib/types";
+import { DEFAULT_POLICY } from "@/lib/procurement/policy";
+import type { BuyingPolicy, ProcuredLot } from "@/lib/procurement/types";
+import type { AgentResult } from "@/lib/types";
+
+interface ActiveDeal {
+  items: DealItem[];
+  negotiate: boolean;
+  policy: BuyingPolicy;
+  budget: number;
+}
+
+const toItem = (lotId: string): DealItem => {
+  const lot = LOTS.find((l) => l.id === lotId)!;
+  return {
+    lotId,
+    title: lot.title,
+    wholesaler: lot.wholesaler,
+    listPrice: lot.wholesalePrice,
+    image: lot.image
+  };
+};
 
 interface UserTurn {
   role: "user";
@@ -28,7 +51,9 @@ export function ChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [active, setActive] = useState<LotScore | null>(null);
+  const [policy, setPolicy] = useState<BuyingPolicy>(DEFAULT_POLICY);
+  const [lastBrief, setLastBrief] = useState<string | null>(null);
+  const [deal, setDeal] = useState<ActiveDeal | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +66,7 @@ export function ChatPanel() {
     setError(null);
     setInput("");
     setTurns((t) => [...t, { role: "user", text: clean }]);
+    setLastBrief(clean);
     setLoading(true);
     track("brief_submitted", { length: clean.length });
 
@@ -48,7 +74,7 @@ export function ChatPanel() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: clean })
+        body: JSON.stringify({ brief: clean, policy })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Agent error");
@@ -65,6 +91,9 @@ export function ChatPanel() {
   }
 
   const started = turns.length > 0 || loading;
+
+  const openDeal = (result: AgentResult, lotIds: string[], negotiate: boolean) =>
+    setDeal({ items: lotIds.map(toItem), negotiate, policy: result.policy, budget: result.plan.budget });
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
@@ -98,10 +127,21 @@ export function ChatPanel() {
           </p>
           <ShopifyInput onInfer={submit} disabled={loading} />
         </div>
+
+        <PolicyPanel
+          policy={policy}
+          onChange={setPolicy}
+          canApply={Boolean(lastBrief) && !loading}
+          onApply={() => {
+            if (!lastBrief) return;
+            track("policy_applied", { ...policy });
+            submit(lastBrief);
+          }}
+        />
       </aside>
 
       {/* Conversation */}
-      <section className="card flex h-[72vh] min-h-[560px] flex-col overflow-hidden">
+      <section className="card flex h-[80vh] min-h-[600px] flex-col overflow-hidden lg:sticky lg:top-20">
         <div ref={feedRef} className="scroll-slim flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
           {!started && <EmptyState onPick={submit} />}
 
@@ -113,7 +153,26 @@ export function ChatPanel() {
                 </div>
               </div>
             ) : (
-              <AgentMessage key={i} result={turn.result} onConfirm={setActive} disabled={loading} />
+              <AgentMessage
+                key={i}
+                result={turn.result}
+                disabled={loading}
+                onBuy={(m) =>
+                  openDeal(
+                    turn.result,
+                    [m.lot.id],
+                    turn.result.policy.autoNegotiate || m.policy.status !== "compliant"
+                  )
+                }
+                onNegotiate={(m) => openDeal(turn.result, [m.lot.id], true)}
+                onBuyPlan={() =>
+                  openDeal(
+                    turn.result,
+                    turn.result.plan.lines.map((l) => l.lotId),
+                    turn.result.policy.autoNegotiate
+                  )
+                }
+              />
             )
           )}
 
@@ -165,18 +224,22 @@ export function ChatPanel() {
         </form>
       </section>
 
-      {active && <CheckoutModal match={active} onClose={() => setActive(null)} />}
+      {deal && <DealModal {...deal} onClose={() => setDeal(null)} />}
     </div>
   );
 }
 
 function AgentMessage({
   result,
-  onConfirm,
+  onBuy,
+  onNegotiate,
+  onBuyPlan,
   disabled
 }: {
   result: AgentResult;
-  onConfirm: (m: LotScore) => void;
+  onBuy: (m: ProcuredLot) => void;
+  onNegotiate: (m: ProcuredLot) => void;
+  onBuyPlan: () => void;
   disabled?: boolean;
 }) {
   return (
@@ -194,10 +257,19 @@ function AgentMessage({
         </div>
       </div>
 
+      <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
+
       {result.matches.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {result.matches.map((m, idx) => (
-            <LotCard key={m.lot.id} match={m} rank={idx} onConfirm={onConfirm} disabled={disabled} />
+            <LotCard
+              key={m.lot.id}
+              match={m}
+              rank={idx}
+              onBuy={onBuy}
+              onNegotiate={onNegotiate}
+              disabled={disabled}
+            />
           ))}
         </div>
       )}
