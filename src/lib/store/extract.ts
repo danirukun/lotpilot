@@ -115,13 +115,14 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   if (mapsAvailable()) {
     notes.push(maps ? "Matched a Google Maps listing via the Places API." : "No Google Maps listing matched.");
   }
+  // Snapshot Maps win over Tavily guesses when the page itself came from a fixture.
+  if (!maps && mode === "fixture" && fixture?.maps) {
+    maps = fixture.maps;
+    notes.push("Location listing taken from the demo snapshot.");
+  }
   if (!maps && research?.listing) {
     maps = research.listing;
     notes.push("Built the location listing from web research snippets (Tavily). Check it before you rely on it.");
-  }
-  if (!maps && mode === "fixture" && fixture?.maps) {
-    maps = fixture.maps;
-    notes.push("Location listing taken from the demo snapshot (live Maps lookup missed).");
   }
   if (!maps) {
     maps = listingFromJsonLd(parsed?.business ?? null, name);
@@ -151,7 +152,11 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   };
 
   const vertical = classifyVertical(corpus);
-  const locations = Math.min(10, Math.max(parsed?.business?.locations ?? 1, research?.locations ?? 0));
+  // Fixture pages keep their own site count; Tavily postcode hits must not inflate demo size.
+  const locations = Math.min(
+    10,
+    Math.max(parsed?.business?.locations ?? 1, mode === "fixture" ? 0 : (research?.locations ?? 0))
+  );
   const size = estimateSize(catalog, maps, locations);
   const place = maps?.locality ?? locality;
   const fashionFit = isFashion(vertical.primary) || vertical.primary === "general";
