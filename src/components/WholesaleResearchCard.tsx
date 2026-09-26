@@ -5,7 +5,8 @@ import type { WholesaleResearch } from "@/lib/wholesale/types";
 const MODE_LABEL: Record<WholesaleResearch["mode"], string> = {
   live: "Live search",
   index: "Directory index",
-  mixed: "Index + live"
+  mixed: "Index + live",
+  rag: "Hybrid RAG"
 };
 
 export function WholesaleResearchCard({ research }: { research: WholesaleResearch }) {
@@ -27,7 +28,11 @@ export function WholesaleResearchCard({ research }: { research: WholesaleResearc
             >
               thewholesaler.co.uk
             </a>
-            {research.mode !== "index" ? " plus live web research." : "."}
+            {research.mode === "rag"
+              ? " via hybrid RRF search (trigram + embedding)."
+              : research.mode !== "index"
+                ? " plus live web research."
+                : "."}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">

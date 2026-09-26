@@ -24,7 +24,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Tell me about your store first." }, { status: 400 });
     }
 
-    const result = await runAgent(brief, body?.policy, { rfq: body?.rfq, personaId: body?.personaId });
+    const result = await runAgent(brief, body?.policy, {
+      rfq: body?.rfq,
+      personaId: body?.personaId,
+      refresh: body?.refresh === true
+    });
     return NextResponse.json(result);
   } catch {
     return NextResponse.json({ error: "The agent hit a snag. Try again." }, { status: 500 });

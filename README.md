@@ -45,7 +45,7 @@ LotPilot acts as the retailer's procurement agent. It turns a plain-language bri
 - **Deal room.** A modal plays back each negotiation message, then shows the savings before checkout.
 - **Simulated checkout.** The server recomputes every negotiated price, so the client cannot set a price. The order shows lines, savings, shipping, total, and a delivery estimate.
 - **Optional LLM narration.** With an API key, a model writes the buyer's briefing. Ranking, policy, and numbers stay deterministic.
-- **UK wholesale index.** The agent matches store DNA to [The Wholesaler UK](https://www.thewholesaler.co.uk/) directory categories and, when keyed, runs a live Tavily search on that site. Leads show in the demo as external supplier links.
+- **UK wholesale RAG.** The agent searches a Supabase index of [The Wholesaler UK](https://www.thewholesaler.co.uk/) with hybrid RRF (full-text + trigram + embeddings). Without Supabase keys it falls back to the seeded index and optional Tavily.
 - **Offline-first.** No key is required for any step of the demo.
 
 ## Store feature extraction
@@ -54,9 +54,15 @@ The retailer can paste a store URL instead of a brief. The engine is in `src/lib
 
 Completed profiles are cached under `.cache/store-profiles/` (override with `STORE_CACHE_DIR`) for 24 hours (`STORE_CACHE_TTL_MS`). Cache hits replay the same analysis so demo runs stay deterministic and skip live fetch / Tavily / Places. Pass `{ refresh: true }` on `/api/store` or `/api/chat` to force a fresh read.
 
-## UK wholesale index research
+## UK wholesale RAG (Supabase)
 
-Each agent run also researches real UK wholesale directories. The seeded index maps store DNA to categories on [The Wholesaler UK](https://www.thewholesaler.co.uk/) (clothing, footwear, football, electronics, and more). When `TAVILY_API_KEY` is set, Tavily searches `thewholesaler.co.uk` and merges live hits. Results appear in the demo as **UK wholesale index** leads. Research caches under `.cache/wholesale-research/`.
+Each agent run researches real UK wholesale directories.
+
+1. **Supabase hybrid search** (when `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set). Postgres fuses full-text (`tsvector`), trigram (`pg_trgm`), and embedding (`pgvector`) ranks with reciprocal rank fusion via `wholesale_hybrid_search`.
+2. **Seeded fallback.** Local `WHOLESALE_INDEX` categories still match when RAG is empty or unconfigured.
+3. **Optional Tavily.** Live `thewholesaler.co.uk` hits fill gaps when `TAVILY_API_KEY` is set.
+
+Project: [lmfvzuvhwvjpdfkoqqvc](https://supabase.com/dashboard/project/lmfvzuvhwvjpdfkoqqvc) (rename to LotPilot in the dashboard if the name still shows the previous app). Schema lives in `supabase/migrations/`. Re-crawl and upsert with `npm run ingest:wholesale`. Research caches under `.cache/wholesale-research/`.
 
 ### Sources
 
