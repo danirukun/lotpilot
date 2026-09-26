@@ -2,7 +2,7 @@
   "name": "lotpilot",
   "version": "1.0.0",
   "private": true,
-  "description": "LotPilot — an AI wholesale buying agent for UK indie retailers.",
+  "description": "LotPilot, an AI wholesale buying agent for UK indie retailers.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

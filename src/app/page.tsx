@@ -7,23 +7,23 @@ import { gbp } from "@/lib/format";
 const STEPS = [
   {
     n: "01",
-    title: "Learn your store DNA",
-    body: "Describe your shop in a sentence, pick a persona, or paste your store URL. LotPilot reads the page, its SEO tags, your categories and your Google Maps listing, then extracts aesthetic, brands, era, store size and budget."
+    title: "Read your store DNA",
+    body: "Describe your shop in a sentence, pick a persona, or paste your store URL. LotPilot reads the page, SEO tags, categories, and Google Maps listing, then extracts aesthetic, brands, era, size, and budget."
   },
   {
     n: "02",
-    title: "Source strategically",
-    body: "It ranks every lot on store fit, supplier scorecard, 90-day market comparables and landed ROI after shipping and grade risk. Then it builds a diversified opening buy."
+    title: "Rank the wholesale floor",
+    body: "It scores every lot on store fit, supplier scorecard, 90-day market comps, and landed ROI after shipping and grade risk. Then it builds an opening buy inside your budget."
   },
   {
     n: "03",
-    title: "Enforce your buying policy",
-    body: "You set the rules: min and max price per lot, price per piece, grade, sell-through, ROI floor and supplier concentration. Every lot shows which rules pass."
+    title: "Apply your buying policy",
+    body: "You set min and max price per lot, price per piece, grade, sell-through, ROI floor, and supplier concentration. Every lot shows which rules pass."
   },
   {
     n: "04",
     title: "Negotiate and buy",
-    body: "The agent negotiates with each wholesaler, using market comps, early payment and volume bundles. It never goes above your walk-away price. Then it places the order."
+    body: "The agent negotiates with each wholesaler using market comps, early payment, and volume bundles. It never goes above your walk-away price. Then it places the order."
   }
 ];
 
@@ -38,18 +38,17 @@ export default function LandingPage() {
     <div className="min-h-screen">
       <SiteHeader />
 
-      {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="container-app grid items-center gap-12 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
           <div className="animate-fade-up">
-            <span className="label-eyebrow">Agentic Commerce · For independent retailers</span>
+            <span className="label-eyebrow">Agentic commerce for independent retailers</span>
             <h1 className="mt-4 font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              The AI buyer that stocks your shop while you sleep.
+              LotPilot buys wholesale stock that fits your shop.
             </h1>
             <p className="mt-5 max-w-xl text-lg text-paper/70">
-              LotPilot is a wholesale buying agent for UK indie retailers. Tell it your
-              store DNA and your buying policy. It finds matching secondhand lots, scores
-              fit, margin and supplier risk, negotiates the price and completes the purchase.
+              A wholesale buying agent for UK indie retailers. Give it your store DNA and buying
+              policy. It finds matching secondhand lots, scores fit, margin, and supplier risk,
+              negotiates price, and completes the purchase.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/demo" className="btn-primary px-6 py-3 text-base">
@@ -92,7 +91,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <Bubble who="agent">
-                Negotiated with Rewind Bales: {gbp(540)} → {gbp(495)} using market comps and
+                Negotiated with Rewind Bales: {gbp(540)} to {gbp(495)} using market comps and
                 early payment. Inside your policy. Place the order?
               </Bubble>
             </div>
@@ -100,30 +99,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem / positioning */}
       <section className="border-y border-ink-line/60 bg-ink-soft/40">
         <div className="container-app grid gap-6 py-12 md:grid-cols-3">
           <Positioning
-            title="Buying is the hard part"
-            body="Indie retailers live or die on what they buy. Sifting wholesale bales for the right aesthetic and margin is slow, manual guesswork."
+            title="Buying is slow and expensive"
+            body="Indie retailers spend hours sorting wholesale bales. They guess which lots fit the shop, which make money, and which suppliers deliver."
           />
           <Positioning
             title="An agent, not a catalog"
-            body="LotPilot doesn't just list lots. It reasons about your store, obeys your procurement policy, negotiates on your behalf and transacts end-to-end."
+            body="LotPilot ranks lots for your store, enforces your procurement policy, negotiates with wholesalers, and places the order."
           />
           <Positioning
             title="Built for independent sellers"
-            body="Indie shops with their own shop floor and online store. LotPilot buys for them across many vintage wholesalers, so the owner can run the shop."
+            body="For shops with a physical floor and an online store. LotPilot buys across many vintage wholesalers so the owner can run the shop."
           />
         </div>
       </section>
 
-      {/* How it works */}
       <section id="how" className="container-app py-16 lg:py-20">
         <div className="max-w-2xl">
           <span className="label-eyebrow">How it works</span>
           <h2 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">
-            From store brief to placed order in four steps.
+            From store brief to placed order in four steps
           </h2>
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -137,18 +134,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Featured lots */}
       <section className="border-t border-ink-line/60 bg-ink-soft/40">
         <div className="container-app py-16">
           <div className="flex items-end justify-between gap-4">
             <div>
               <span className="label-eyebrow">On the wholesale floor</span>
               <h2 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">
-                A live, graded catalog.
+                A live, graded catalog
               </h2>
             </div>
             <Link href="/demo" className="btn-ghost hidden sm:inline-flex">
-              Match my store →
+              Match my store
             </Link>
           </div>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -178,18 +174,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Personas CTA */}
       <section className="container-app py-16 lg:py-20">
         <div className="card overflow-hidden">
           <div className="grid gap-8 p-8 lg:grid-cols-[1fr_1fr] lg:p-12">
             <div>
               <span className="label-eyebrow">Try it now</span>
               <h2 className="mt-3 font-display text-3xl tracking-tight sm:text-4xl">
-                Pick a store persona or describe your own.
+                Pick a store persona or describe your own
               </h2>
               <p className="mt-4 text-paper/70">
-                No sign-up, no keys required. The agent runs a deterministic matcher out
-                of the box and upgrades to live LLM reasoning if an API key is present.
+                No sign-up and no keys required. The agent runs a deterministic matcher by
+                default. Add an API key to switch on live LLM narration.
               </p>
               <Link href="/demo" className="btn-primary mt-6 px-6 py-3 text-base">
                 Launch the agent
@@ -215,7 +210,7 @@ export default function LandingPage() {
       <footer className="border-t border-ink-line/60">
         <div className="container-app flex flex-col items-center justify-between gap-4 py-8 text-sm text-paper/50 sm:flex-row">
           <Logoish />
-          <p>Built for the Agentic Commerce hackathon · Demo data only.</p>
+          <p>Built for the Agentic Commerce hackathon. Demo data only.</p>
         </div>
       </footer>
     </div>

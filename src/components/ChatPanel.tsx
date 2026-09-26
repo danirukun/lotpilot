@@ -136,7 +136,7 @@ export function ChatPanel() {
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Store personas</h2>
           <p className="mt-1 text-xs text-paper/55">
-            Personas with a site run a live store analysis (page + Tavily when keyed). Others send a brief.
+            Personas with a site URL run store analysis. The rest send a typed brief.
           </p>
           <div className="mt-3 space-y-2">
             {PERSONAS.map((p) => (
@@ -173,8 +173,9 @@ export function ChatPanel() {
         <div className="card p-4">
           <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
-            Live page fetch + Shopify feeds when public, Tavily web research when <code className="text-paper/70">TAVILY_API_KEY</code>{" "}
-            is set, Google Places when mapped. Demo domains fall back to a snapshot only if the live page fails.
+            Fetches the live page and Shopify feeds when public. Runs Tavily when{" "}
+            <code className="text-paper/70">TAVILY_API_KEY</code> is set, and Google Places when mapped.
+            Demo domains use a snapshot only if the live page fails.
           </p>
           <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>
@@ -391,10 +392,10 @@ function EmptyState({ onPick }: { onPick: (brief: string) => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center py-10 text-center">
       <AgentAvatar large />
-      <h2 className="mt-4 font-display text-2xl">Tell me about your shop.</h2>
+      <h2 className="mt-4 font-display text-2xl">Describe your shop</h2>
       <p className="mt-2 max-w-md text-sm text-paper/60">
-        I&apos;ll read your store DNA, scan the wholesale floor, and rank lots by fit and
-        projected margin. Try a persona on the left or describe your store below.
+        LotPilot reads your store DNA, scans the wholesale catalog, and ranks lots by fit and
+        projected margin. Pick a persona on the left or type a brief below.
       </p>
       <button onClick={() => onPick(SUGGESTIONS[0])} className="btn-primary mt-5">
         Try the Shoreditch Y2K example

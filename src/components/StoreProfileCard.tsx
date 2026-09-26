@@ -139,7 +139,7 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
       )}
       {!store.fashionFit && store.vertical.primary === "electronics" && (
         <div className="mx-4 mb-3 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 py-2 text-xs text-brand-200 sm:mx-5">
-          Electronics store — ranking refurbished tech wholesale lots.
+          Electronics store. Ranking refurbished tech wholesale lots.
         </div>
       )}
 

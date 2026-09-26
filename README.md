@@ -1,6 +1,6 @@
 # LotPilot
 
-**LotPilot is an AI wholesale buying agent for independent UK retailers** who run their own physical shop and online store. They buy secondhand and vintage stock across many wholesalers — not through one marketplace. Describe your shop and set your buying rules. The agent finds matching wholesale lots, checks them against your policy, negotiates the price, and completes the buy.
+LotPilot is an AI wholesale buying agent for independent UK retailers who run their own physical shop and online store. They buy secondhand and vintage stock across many wholesalers, not through one marketplace. Describe your shop and set your buying rules. The agent finds matching wholesale lots, checks them against your policy, negotiates the price, and completes the buy.
 
 ## Overview
 
@@ -19,7 +19,7 @@ LotPilot runs fully offline. It needs no paid API keys. Deterministic code does 
 
 ## Hackathon venue (Fleek)
 
-This demo was built for a hackathon hosted around [Fleek](https://www.joinfleek.com/) (B2B wholesale secondhand). LotPilot is **not** Fleek. It is **not** built on Fleek. The product targets independent UK retailers first. User-facing copy stays retailer-centric.
+This demo was built for a hackathon hosted around [Fleek](https://www.joinfleek.com/) (B2B wholesale secondhand). LotPilot is not Fleek. It is not built on Fleek. The product targets independent UK retailers first. User-facing copy stays retailer-centric.
 
 ## Hackathon track
 
@@ -32,7 +32,7 @@ LotPilot acts as the retailer's procurement agent. It turns a plain-language bri
 - **Chat brief.** The retailer describes the shop in free text.
 - **Store URL analysis.** The retailer pastes a store URL. The agent reads the store and builds the store DNA, a size estimate, and a budget. See [Store feature extraction](#store-feature-extraction).
 - **Store personas.** Seven preset shops let a presenter skip typing.
-- **RFQ-lite matching.** The agent parses piece counts, price caps, grade preference, and brand hints from the brief. It ranks lots on how well they meet the RFQ, not just store vibe. See [RFQ matching](#rfq-matching).
+- **RFQ-lite matching.** The agent parses piece counts, price caps, grade preference, and brand hints from the brief. It ranks lots on how well they meet the RFQ, not only on store vibe. See [RFQ matching](#rfq-matching).
 - **Deterministic matcher.** The agent parses the brief into store DNA. It scores every lot on aesthetic, category, brand, era, grade, and budget.
 - **Buying policy engine.** The retailer sets rules in the sidebar. Each lot gets a verdict: compliant, negotiate, or blocked. Each card lists every rule with its result.
 - **Supplier scorecards.** Each wholesaler has a 0–100 score on reliability, grade consistency, fill rate, and QC/return risk. See [Supplier scorecards](#supplier-scorecards).
@@ -67,7 +67,7 @@ The engine reads these sources in this order:
    - Web research with Tavily, if `TAVILY_API_KEY` is set. The engine searches for the store name with "google maps reviews address". It reads the rating, the review count, the address, and the store types from the search snippets.
    - The demo snapshot Maps listing, when the page came from a fixture.
    - The JSON-LD business data on the store page.
-7. **Web research.** When `TAVILY_API_KEY` is set, Tavily always runs — including for demo domains. Results go into the classifier and the store profile. Keep the key in `.env.local`.
+7. **Web research.** When `TAVILY_API_KEY` is set, Tavily always runs, including for demo domains. Results go into the classifier and the store profile. Keep the key in `.env.local`.
 
 The engine ignores a failed source and continues. Without keys, fixtures and JSON-LD still produce a full offline profile.
 
@@ -128,8 +128,8 @@ Retailers speak in letters A, B, and C. The catalog uses grades A, AB, B, and Mi
 
 ### UI
 
-- **RfqSummaryCard** — RFQ line, chips, and optional edit form.
-- **LotCard** — RFQ match %, expandable RFQ checks, supplier score with expandable scorecard, and key-supplier label.
+- **RfqSummaryCard:** RFQ line, chips, and optional edit form.
+- **LotCard:** RFQ match %, expandable RFQ checks, supplier score with expandable scorecard, and key-supplier label.
 
 ## Supplier scorecards
 
@@ -272,33 +272,33 @@ Then add one key and restart the server.
 
 API routes:
 
-- `POST /api/chat` — takes `{ brief, policy?, rfq? }` or `{ storeUrl, policy?, refresh? }`. Returns store DNA, RFQ, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
-- `POST /api/store` — takes `{ url, refresh? }`. Returns the store profile (cached by default). Returns 400 for a URL that is not public.
-- `POST /api/negotiate` — takes `{ lotIds, policy?, budget? }`. Returns one negotiation transcript per lot.
-- `POST /api/checkout` — takes `{ lotIds, policy?, budget?, negotiate? }`. Negotiates again on the server and returns a confirmed order.
+- `POST /api/chat` takes `{ brief, policy?, rfq? }` or `{ storeUrl, policy?, refresh? }`. Returns store DNA, RFQ, procured lots, sourcing plan, policy, and summary. With `storeUrl`, the result also has `store`, the store profile.
+- `POST /api/store` takes `{ url, refresh? }`. Returns the store profile (cached by default). Returns 400 for a URL that is not public.
+- `POST /api/negotiate` takes `{ lotIds, policy?, budget? }`. Returns one negotiation transcript per lot.
+- `POST /api/checkout` takes `{ lotIds, policy?, budget?, negotiate? }`. Negotiates again on the server and returns a confirmed order.
 
 Seed data:
 
-- `src/data/lots.ts` — 43 fashion lots plus 8 electronics lots (`catalog: "electronics"`).
-- `src/data/suppliers.ts` — 13 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
-- `src/data/benchmarks.ts` — 90-day comparable price per piece for each lot.
-- `src/data/personas.ts` — 7 store personas.
-- `src/data/supplierScorecards.ts` — reliability, grade consistency, fill rate, and QC metrics per supplier.
-- `src/data/purchaseHistory.ts` — key-supplier purchase history per persona.
+- `src/data/lots.ts`: 43 fashion lots plus 8 electronics lots (`catalog: "electronics"`).
+- `src/data/suppliers.ts`: 13 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
+- `src/data/benchmarks.ts`: 90-day comparable price per piece for each lot.
+- `src/data/personas.ts`: 7 store personas.
+- `src/data/supplierScorecards.ts`: reliability, grade consistency, fill rate, and QC metrics per supplier.
+- `src/data/purchaseHistory.ts`: key-supplier purchase history per persona.
 
 UI:
 
-- `src/app/page.tsx` — the landing page.
-- `src/app/demo/page.tsx` — the live agent page.
-- `src/components/ChatPanel.tsx` — the chat, personas, RFQ edit, and policy wiring.
-- `src/components/RfqSummaryCard.tsx` — RFQ summary and edit form.
-- `src/components/RfqChecks.tsx` — per-lot RFQ check list.
-- `src/components/SupplierScorecard.tsx` — supplier score badge and expandable dimensions.
-- `src/components/PolicyPanel.tsx` — the buying policy editor.
-- `src/components/SourcingPlanCard.tsx` — the plan KPIs, supplier mix, and exclusions.
-- `src/components/StoreProfileCard.tsx` — the store profile: vertical, size, Maps listing, search snippet, categories, DNA, and sources.
-- `src/components/LotCard.tsx` — the lot card with metrics and policy checks.
-- `src/components/DealModal.tsx` — the negotiation playback and checkout.
+- `src/app/page.tsx`: the landing page.
+- `src/app/demo/page.tsx`: the live agent page.
+- `src/components/ChatPanel.tsx`: the chat, personas, RFQ edit, and policy wiring.
+- `src/components/RfqSummaryCard.tsx`: RFQ summary and edit form.
+- `src/components/RfqChecks.tsx`: per-lot RFQ check list.
+- `src/components/SupplierScorecard.tsx`: supplier score badge and expandable dimensions.
+- `src/components/PolicyPanel.tsx`: the buying policy editor.
+- `src/components/SourcingPlanCard.tsx`: the plan KPIs, supplier mix, and exclusions.
+- `src/components/StoreProfileCard.tsx`: the store profile: vertical, size, Maps listing, search snippet, categories, DNA, and sources.
+- `src/components/LotCard.tsx`: the lot card with metrics and policy checks.
+- `src/components/DealModal.tsx`: the negotiation playback and checkout.
 
 ## 3-minute demo script
 
@@ -308,14 +308,14 @@ Use this script for a live presentation. The sample lines are for the presenter 
 2. **Go to the live agent (0:15).** Click "Launch agent". Say: "No sign-up. The retailer describes the shop. The sidebar holds the buying policy."
 3. **Neon Rewind persona (0:25).** Click "Neon Rewind". Say: "Y2K thrift in Shoreditch, £2000 budget." Point at the RFQ line. Say: "The agent turned the brief into a quote request."
 4. **Sourcing plan (0:40).** Say: "Opening buy: three lots, £1,790 spend, £150 saved, ~90% landed ROI. Top pick: Y2K Baby Tees Bundle. RFQ line: `Y2K clubwear denim & tops, budget £2k`."
-5. **Lot card (0:55).** Expand the supplier scorecard and RFQ checks. Say: "RFQ match, supplier score, policy checks — all visible."
+5. **Lot card (0:55).** Expand the supplier scorecard and RFQ checks. Say: "RFQ match, supplier score, and policy checks are all visible."
 6. **Negotiate (1:10).** Click "Negotiate" on the top card. Say: "Market comparables, then early payment. Deal at £495, £45 under list."
 7. **RFQ-style brief (1:25).** Paste: `I need 80-120 Y2K tops, grade A or B, max £12 a piece, budget £2k`. Say: "RFQ: `80–120 Y2K clubwear denim & tops, grade A/B, ≤£12/pc, budget £2k`. Plan: three lots, £1,795 spend, £165 saved."
 8. **MAXGRG (1:35).** Click MAXGRG. Say: "Four lots, £2,335 spend, £180 saved. Top pick: Vintage Levi's Jeans Mixed Wash Bundle."
 9. **Levi RFQ (1:45).** Paste: `Looking for 30-50 vintage Levi's or Wrangler jeans, grade A only, under £30 per piece, £2500`. Say: "RFQ: `30–50 vintage streetwear Levi's / Wrangler denim & outerwear & more, grade A, ≤£30/pc, budget £2.5k`. Three lots, £2,095 spend."
 10. **Classic Football Shirts (1:55).** Click that persona. Say: "Four lots, £2,880 spend, £260 saved, ~83% ROI. Top pick: 90s English League Football Shirts."
 11. **Policy tweak (2:05).** Set min grade to A and max lot price to £600. Re-run. Say: "Tighter rules change the buy. Each exclusion names the rule."
-12. **Store URLs (2:15).** Click `neonrewind.co.uk`. Say: "Small Y2K clothing, £2,500 budget from size signals." Click `gadgetgrid.co.uk`. Say: "Five refurbished tech lots, £2,740 spend, £231 saved. Top pick: Refurbished Business Laptops — Dell & HP. No fashion lots."
+12. **Store URLs (2:15).** Click `neonrewind.co.uk`. Say: "Small Y2K clothing, £2,500 budget from size signals." Click `gadgetgrid.co.uk`. Say: "Five refurbished tech lots, £2,740 spend, £231 saved. Top pick: Refurbished Business Laptops, Dell and HP. No fashion lots."
 13. **Close (2:50).** Say: "Ranking, RFQ scoring, policy, and negotiation are deterministic. The optional LLM only writes the summary."
 
 ## Deployment
