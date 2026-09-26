@@ -91,7 +91,7 @@ export interface AgentResult {
   plan: SourcingPlan;
   policy: BuyingPolicy;
   summary: string;
-  source: "llm" | "deterministic";
+  source: "llm" | "deterministic" | "retrieval";
   llmModel?: string;
   /** Present when the run started from a store URL. */
   store?: StoreProfile;

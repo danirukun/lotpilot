@@ -1,4 +1,4 @@
-import { AESTHETIC_KEYWORDS, BRAND_DICTIONARY, CATEGORY_KEYWORDS } from "@/lib/parseBrief";
+import { AESTHETIC_KEYWORDS, BRAND_DICTIONARY, CATEGORY_KEYWORDS, normalizeStockText } from "@/lib/parseBrief";
 import type { CatalogData, MapsListing, SizeBucket, Vertical, VerticalScore } from "@/lib/store/types";
 import type { Category, StoreDNA } from "@/lib/types";
 
@@ -17,7 +17,7 @@ export const VERTICAL_LABEL: Record<Vertical, string> = {
 };
 
 const VERTICAL_KEYWORDS: Record<Exclude<Vertical, "general">, string[]> = {
-  clothing: ["clothing", "clothes", "apparel", "fashion", "vintage", "thrift", "denim", "jeans", "dress", "tee", "t-shirt", "shirt", "jacket", "coat", "knitwear", "hoodie", "womenswear", "menswear", "boutique", "streetwear", "workwear"],
+  clothing: ["clothing", "clothes", "apparel", "fashion", "denim", "jeans", "dress", "tee", "t-shirt", "shirt", "jacket", "coat", "knitwear", "hoodie", "womenswear", "menswear", "boutique", "streetwear", "workwear"],
   footwear: ["shoe", "shoes", "sneaker", "trainer", "boots", "footwear", "sandals"],
   accessories: ["jewellery", "jewelry", "watch", "watches", "handbag", "bags", "sunglasses", "scarf", "accessories"],
   electronics: ["electronics", "phone", "smartphone", "laptop", "headphones", "earbuds", "charger", "tablet", "camera", "gaming pc", "console", "tech", "gadget", "refurbished", "usb"],
@@ -59,6 +59,7 @@ export interface Corpus {
   mapsTypes: string[];
   /** Third-party web research snippets; weighted low because they may describe other shops. */
   research?: string;
+  content?: string;
 }
 
 const WEIGHTS = { name: 1.5, seo: 1.5, categories: 2, catalog: 0.4, research: 0.5 };
@@ -69,13 +70,14 @@ const countTerm = (text: string, kw: string, strict = false) =>
   (text.match(new RegExp(`\\b${escape(kw)}${strict ? "(?:s|es)?\\b" : ""}`, "gi")) ?? []).length;
 
 function weightedHits(corpus: Corpus, keywords: string[], strict = false): number {
-  const count = (text: string, kw: string) => countTerm(text, kw, strict);
+  const count = (text: string, kw: string) => countTerm(normalizeStockText(text), kw, strict);
   return keywords.reduce(
     (sum, kw) =>
       sum +
       count(corpus.name, kw) * WEIGHTS.name +
       count(corpus.seo, kw) * WEIGHTS.seo +
       count(corpus.categories, kw) * WEIGHTS.categories +
+      Math.min(6, count(corpus.content ?? "", kw)) * 1.5 +
       Math.min(10, count(corpus.catalog, kw)) * WEIGHTS.catalog +
       Math.min(6, count(corpus.research ?? "", kw)) * WEIGHTS.research,
     0
@@ -93,6 +95,9 @@ export function classifyVertical(corpus: Corpus): {
       weightedHits(corpus, VERTICAL_KEYWORDS[v], true) +
       corpus.mapsTypes.filter((t) => MAPS_TYPE_VERTICAL[t] === v).length * 6
   }));
+  // Vintage is an era/condition across furniture, records and clothing.
+  // Use it as a clothing hint only if no product vertical is established.
+  if (scores.every(s => s.score === 0)) scores[0].score = weightedHits(corpus, ["vintage", "thrift"], true);
   scores.sort((a, b) => b.score - a.score);
   const total = scores.reduce((s, x) => s + x.score, 0);
   const top = scores[0];
@@ -106,7 +111,7 @@ export function classifyVertical(corpus: Corpus): {
 
 export const isFashion = (v: Vertical) => FASHION.includes(v);
 
-const BUDGET_BY_SIZE: Record<SizeBucket, { label: string; range: [number, number]; suggested: number }> = {
+const BUDGET_BY_SIZE: Record<Exclude<SizeBucket, "unknown">, { label: string; range: [number, number]; suggested: number }> = {
   micro: { label: "Micro · 1 person or market stall", range: [500, 1500], suggested: 1000 },
   small: { label: "Small · single indie shop", range: [1500, 5000], suggested: 2500 },
   medium: { label: "Medium · established shop or 2-3 sites", range: [5000, 20000], suggested: 8000 },
@@ -118,7 +123,7 @@ export function estimateSize(
   catalog: CatalogData,
   maps: MapsListing | null,
   locations: number
-): { bucket: SizeBucket; label: string; drivers: string[]; suggestedBudget: number; budgetRange: [number, number] } {
+): { bucket: SizeBucket; label: string; drivers: string[]; suggestedBudget?: number; budgetRange?: [number, number] } {
   const points: number[] = [];
   const drivers: string[] = [];
   const tier = (v: number, cuts: [number, number, number]) => (v < cuts[0] ? 0 : v < cuts[1] ? 1 : v < cuts[2] ? 2 : 3);
@@ -143,9 +148,9 @@ export function estimateSize(
     drivers.push(`${locations} physical locations`);
   }
 
+  if (points.length === 0) return { bucket: "unknown", label: "Unknown · no reliable size evidence", drivers: ["Size and buying budget are not established by the available sources."] };
   const avg = points.length ? points.reduce((a, b) => a + b, 0) / points.length : 0.5;
   const bucket: SizeBucket = avg < 0.75 ? "micro" : avg < 1.5 ? "small" : avg < 2.25 ? "medium" : "large";
-  if (points.length === 0) drivers.push("No size signals found; assumed a micro shop");
   const b = BUDGET_BY_SIZE[bucket];
   return { bucket, label: b.label, drivers, suggestedBudget: b.suggested, budgetRange: b.range };
 }
@@ -158,7 +163,7 @@ const topKeys = (counts: Map<string, number>, n: number, min = 1) =>
     .map(([k]) => k);
 
 /** Store DNA from weighted keyword counts across every extracted source. */
-export function deriveDna(corpus: Corpus, locality: string | undefined, budget: number, brief: string): StoreDNA {
+export function deriveDna(corpus: Corpus, locality: string | undefined, budget: number | undefined, brief: string): StoreDNA {
   const aesthetics = new Map<string, number>();
   for (const [key, kws] of Object.entries(AESTHETIC_KEYWORDS)) {
     const hits = weightedHits(corpus, kws);
@@ -169,18 +174,18 @@ export function deriveDna(corpus: Corpus, locality: string | undefined, budget: 
     const hits = weightedHits(corpus, kws);
     if (hits > 0) categories.set(key, hits);
   }
-  const all = [corpus.name, corpus.seo, corpus.categories, corpus.catalog].join(" ").toLowerCase();
+  const all = normalizeStockText([corpus.name, corpus.seo, corpus.categories, corpus.catalog, corpus.content ?? ""].join(" ")).toLowerCase();
   const brands = BRAND_DICTIONARY.filter((b) => new RegExp(`\\b${escape(b.toLowerCase())}(?![a-z])`).test(all));
-  const decades = ["1970s", "1980s", "1990s", "2000s", "2010s"].filter(
+  const decades = ["1950s", "1960s", "1970s", "1980s", "1990s", "2000s", "2010s"].filter(
     (d) => all.includes(d) || new RegExp(`\\b${d.slice(2, 4)}s\\b`).test(all)
   );
-  const topAesthetics = topKeys(aesthetics, 3, 1.5);
+  const topAesthetics = topKeys(aesthetics, 12, 1.5);
   if (topAesthetics.includes("y2k") && !decades.includes("2000s")) decades.push("2000s");
 
   return {
     brief,
     aesthetics: topAesthetics,
-    categories: topKeys(categories, 4, 1.5) as Category[],
+    categories: topKeys(categories, 16, 1.5) as Category[],
     brands: brands.slice(0, 6),
     decades,
     budget,

@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const run = (onProgress?: ProgressReporter) => storeUrl
-      ? runAgentForStore(storeUrl, body?.policy, { refresh: body?.refresh === true, onProgress })
+      ? runAgentForStore(storeUrl, body?.policy, { rfq: body?.rfq, refresh: body?.refresh === true, onProgress })
       : runAgent(brief, body?.policy, {
           rfq: body?.rfq, personaId: body?.personaId, refresh: body?.refresh === true, onProgress
         });

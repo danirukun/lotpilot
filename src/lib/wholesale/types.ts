@@ -9,6 +9,8 @@ export interface WholesaleLead {
   why: string;
   score: number;
   kind?: "supplier" | "category";
+  sourceUrl?: string;
+  rrfScore?: number;
   retrievedAt?: string;
   evidence?: { keywordRank: number | null; fuzzyRank: number | null; vectorRank: number | null };
 }
@@ -17,7 +19,8 @@ export interface WholesaleResearch {
   query: string;
   leads: WholesaleLead[];
   sources: ResearchSource[];
-  mode: "live" | "index" | "mixed" | "rag";
+  mode: "live" | "index" | "mixed" | "rag" | "unavailable";
+  status?: "ok" | "empty" | "unavailable" | "needs-input";
   notes: string[];
   cached?: boolean;
   cachedAt?: string;

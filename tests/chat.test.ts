@@ -15,8 +15,8 @@ test("chat streams real stages before a complete offline result", async () => {
   assert.equal(events[0].type, "progress");
   assert.ok(events.some(event => event.type === "progress" && event.stage === "research"));
   assert.equal(events.at(-1).type, "result");
-  assert.equal(events.at(-1).result.wholesale.mode, "index");
-  assert.ok(events.at(-1).result.matches.length > 0);
+  assert.equal(events.at(-1).result.wholesale.mode, "unavailable");
+  assert.equal(events.at(-1).result.matches.length, 0);
 });
 
 test("JSON callers still receive a complete result and blank input is rejected", async () => {
@@ -25,9 +25,8 @@ test("JSON callers still receive a complete result and blank input is rejected",
   const response = await POST(request("vintage denim, £2000 budget"));
   assert.equal(response.status, 200);
   const result = await response.json();
-  assert.ok(result.matches.length > 0);
-  assert.ok(result.summary.includes(result.wholesale.leads[0].name), "The briefing must use retrieved evidence");
-  assert.match(result.summary, /\[1\]/);
+  assert.equal(result.matches.length, 0);
+  assert.match(result.summary, /unavailable/);
 });
 
 test("editing requested categories and brands also changes supplier research", async () => {
@@ -40,16 +39,11 @@ test("editing requested categories and brands also changes supplier research", a
   assert.doesNotMatch(result.wholesale.query, /denim|nike/i);
 });
 
-test("storefront brands survive RFQ resolution and can still be explicitly cleared", async () => {
-  const original = globalThis.fetch;
-  globalThis.fetch = async () => new Response("Store unavailable", { status: 503 });
-  try {
-    const result = await runAgentForStore("https://gadgetgrid.co.uk/", undefined, { refresh: true });
-    assert.equal(result.store?.fetch.mode, "fixture");
-    assert.deepEqual(result.rfq.brands, ["Apple", "Sony", "Dell"]);
-    assert.match(result.wholesale!.query, /apple OR sony/);
-    const cleared = await runAgentFromDna(result.dna, undefined, result.store, { rfq: { brands: [] } });
-    assert.deepEqual(cleared.rfq.brands, []);
-    assert.doesNotMatch(cleared.wholesale!.query, /apple|sony|dell/);
-  } finally { globalThis.fetch = original; }
+test("brands survive RFQ resolution and can be explicitly cleared", async () => {
+  const dna = { brief: "Vintage denim Nike", aesthetics: ["vintage"], categories: ["denim"], brands: ["Nike"], decades: [] } as Parameters<typeof runAgentFromDna>[0];
+  const result = await runAgentFromDna(dna);
+  assert.deepEqual(result.rfq.brands, ["Nike"]);
+  const cleared = await runAgentFromDna(dna, undefined, undefined, { rfq: { brands: [] } });
+  assert.deepEqual(cleared.rfq.brands, []);
+  assert.doesNotMatch(cleared.wholesale!.query, /nike/);
 });

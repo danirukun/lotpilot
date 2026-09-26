@@ -1,5 +1,5 @@
-import { findFixture } from "@/data/storeFixtures";
-import { cleanCategories, fromShopifyFeeds, readShopifyCatalog } from "@/lib/store/catalog";
+import { readStorePages, type CrawledPage } from "@/lib/store/crawl";
+import { cleanCategories, readShopifyCatalog } from "@/lib/store/catalog";
 import { deriveElectronicsCategories } from "@/lib/catalog";
 import { classifyVertical, deriveDna, estimateSize, isFashion, VERTICAL_LABEL, type Corpus } from "@/lib/store/classify";
 import { readStoreCache, storeCacheKey, writeStoreCache } from "@/lib/store/cache";
@@ -82,22 +82,19 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
   const domain = url.hostname.replace(/^www\./, "");
   const origin = url.origin;
   const notes: string[] = [];
-  const fixture = findFixture(domain);
+  let pages: CrawledPage[] = [];
 
   let mode: StoreProfile["fetch"]["mode"] = "offline";
   let parsed: ParsedPage | null = null;
   let catalog: CatalogData = EMPTY_CATALOG;
 
-  // Live-first: hit the real storefront when the network allows. Fixtures are fallback only.
+  // Read current public evidence; failures never substitute a saved store.
   const html = await fetchText(url.toString());
   if (html) {
     mode = "live";
     parsed = parsePage(html, domain);
-    notes.push("Fetched the live landing page.");
-  } else if (fixture) {
-    mode = "fixture";
-    parsed = parsePage(fixture.html, domain);
-    notes.push("Live page unreachable. Using the built-in demo snapshot for HTML and catalog.");
+    pages = await readStorePages(url, parsed);
+    notes.push(`Read ${pages.length} public storefront pages.`);
   } else {
     notes.push(
       `Could not fetch the landing page. Profile uses the store name${researchAvailable() ? " and web research" : ""} only.`
@@ -110,8 +107,6 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
   if (mode === "live" && parsed?.platform === "shopify") {
     catalog = (await readShopifyCatalog(origin, name)) ?? EMPTY_CATALOG;
     if (catalog.productCount) notes.push("Read the public Shopify collection and product feeds.");
-  } else if (mode === "fixture" && fixture?.shopify) {
-    catalog = fromShopifyFeeds({ collections: fixture.shopify.collections }, { products: fixture.shopify.products }, name);
   }
 
   if (parsed && catalog.categories.length === 0) {
@@ -119,7 +114,7 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
     catalog = { ...catalog, categories: nav, collectionCount: nav.length || undefined };
   }
 
-  // Real APIs whenever keys are set — including demo/fixture domains for the live hackathon path.
+  // Optional external research retains its own source attribution.
   const useResearch = researchAvailable();
   const [placesListing, research] = await Promise.all([
     mapsAvailable() ? findMapsListing([name, locality].filter(Boolean).join(" ")) : Promise.resolve(null),
@@ -129,11 +124,6 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
   let maps: MapsListing | null = placesListing;
   if (mapsAvailable()) {
     notes.push(maps ? "Matched a Google Maps listing via the Places API." : "No Google Maps listing matched.");
-  }
-  // Snapshot Maps win over Tavily guesses when the page itself came from a fixture.
-  if (!maps && mode === "fixture" && fixture?.maps) {
-    maps = fixture.maps;
-    notes.push("Location listing taken from the demo snapshot.");
   }
   if (!maps && research?.listing) {
     maps = research.listing;
@@ -148,7 +138,7 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
       research ? `Web research (Tavily) found ${research.sources.length} sources.` : "Web research (Tavily) returned nothing."
     );
   }
-  if (!maps && !mapsAvailable() && mode !== "fixture") {
+  if (!maps && !mapsAvailable()) {
     notes.push(
       researchAvailable()
         ? "No location listing found. Set GOOGLE_MAPS_API_KEY for a direct Google Maps lookup."
@@ -165,20 +155,36 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
     categories: catalog.categories.join(" · "),
     catalog: catalog.productTerms.join(" "),
     mapsTypes: maps?.types ?? [],
-    research: research?.text
+    research: research?.text,
+    content: pages.map(p => p.page.text).join("\n").slice(0, 70000)
   };
 
   const vertical = classifyVertical(corpus);
-  // Fixture pages keep their own site count; Tavily postcode hits must not inflate demo size.
+  // Size estimates are separate from a retailer's stated buying budget.
   const locations = Math.min(
     10,
-    Math.max(parsed?.business?.locations ?? 1, mode === "fixture" ? 0 : (research?.locations ?? 0))
+    Math.max(parsed?.business?.locations ?? 1, (research?.locations ?? 0))
   );
   const size = estimateSize(catalog, maps, locations);
+  const body = pages.map(p => p.page.text).join("\n");
+  const businessRole = /\b(vintage fair|stallholders?|stall holders?|our traders|vintage market|30 stalls)\b/i.test(body) ? "market-event" as const : parsed ? "retailer" as const : "unknown" as const;
+  const dates = pages.flatMap(p => p.page.publishedDates).filter(d => Number.isFinite(Date.parse(d)));
+  const historical = dates.length > 0 && dates.every(d => Date.now() - Date.parse(d) > 2 * 365.25 * 86400000);
+  const observedCategories = [
+    [/\b(womenswear|menswear|clothing|fashion)\b/i, "Clothing"],
+    [/\b(homewares?|furniture)\b/i, "Homeware"],
+    [/\b(jewellery|jewelry)\b/i, "Jewellery"],
+    [/\b(records|vinyl)\b/i, "Records"],
+    [/\b(shoes|footwear|boots)\b/i, "Footwear"],
+    [/\b(accessories|bags)\b/i, "Accessories"]
+  ].filter(([re]) => (re as RegExp).test(body)).map(([, label]) => label as string);
+  const eraRanges = [...new Set(body.match(/\b(?:19|20)\d{2}\s*[-–—]\s*(?:19|20)\d{2}\b/g) ?? [])];
+  if (businessRole === "market-event") notes.push("This is a market or event site. Confirm your own buying focus and current stock needs.");
+  if (historical) notes.push("The dated content is historical; current trading and stock are unverified.");
   const place = maps?.locality ?? locality;
   const fashionFit = isFashion(vertical.primary) || vertical.primary === "general";
 
-  let dnaDraft = deriveDna(corpus, place, size.suggestedBudget, "");
+  let dnaDraft = deriveDna(corpus, place, undefined, "");
   if (vertical.primary === "electronics") {
     const techBrands = ["Apple", "Samsung", "Sony", "Dell", "HP", "Google", "Microsoft", "Nintendo", "OnePlus", "JBL"];
     const blob = [corpus.name, corpus.seo, corpus.categories, corpus.catalog].join(" ").toLowerCase();
@@ -196,9 +202,13 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
     size.label,
     catalog.categories,
     dnaDraft.aesthetics,
-    size.suggestedBudget
+    undefined
   );
-  const dna = { ...dnaDraft, brief };
+  const dna = { ...dnaDraft, budget: undefined, brief };
+  const evidence = pages.map(({ url: sourceUrl, page }) => {
+    const extracted = deriveDna({ name: "", seo: "", categories: "", catalog: "", content: page.text, mapsTypes: [] }, undefined, undefined, "");
+    return { url: sourceUrl, title: page.seo.title ?? sourceUrl, text: page.text.slice(0, 12000), fetchedAt: new Date().toISOString(), publishedDates: page.publishedDates, categories: extracted.categories, brands: extracted.brands, decades: extracted.decades };
+  });
 
   const signals: StoreSignal[] = [
     { source: "name", label: "Store name", value: name },
@@ -254,6 +264,7 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
     research: research ? { answer: research.answer, sources: research.sources } : null,
     vertical: { ...vertical, label: VERTICAL_LABEL[vertical.primary] },
     size,
+    businessRole, freshness: historical ? "historical" : "unverified", observedCategories, eraRanges, evidence,
     fashionFit,
     dna,
     brief,
@@ -269,13 +280,13 @@ function composeBrief(
   sizeLabel: string,
   categories: string[],
   aesthetics: string[],
-  budget: number
+  budget: number | undefined
 ): string {
   const parts = [
     `${name}${place ? ` in ${place}` : ""}: ${vertical.toLowerCase()} store, ${sizeLabel.split(" · ")[0].toLowerCase()} size.`,
     categories.length ? `Sells ${categories.slice(0, 5).join(", ")}.` : "",
     aesthetics.length ? `Style: ${aesthetics.join(", ")}.` : "",
-    `Suggested opening budget £${budget.toLocaleString("en-GB")}.`
+    budget ? `Suggested opening budget £${budget.toLocaleString("en-GB")}.` : "Buying budget not provided."
   ];
   return parts.filter(Boolean).join(" ");
 }

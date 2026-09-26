@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import type { StoreProfile } from "@/lib/store/types";
 
-export const STORE_CACHE_VERSION = 1;
+export const STORE_CACHE_VERSION = 2;
 
 /** Default 24h — enough for a demo day without serving stale storefront DNA forever. */
 export const DEFAULT_TTL_MS = Number(process.env.STORE_CACHE_TTL_MS ?? 24 * 60 * 60 * 1000);

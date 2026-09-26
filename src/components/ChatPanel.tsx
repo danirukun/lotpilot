@@ -1,41 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DealModal, type DealItem } from "@/components/DealModal";
-import { MatchesPanel } from "@/components/MatchesPanel";
-import { PolicyPanel } from "@/components/PolicyPanel";
 import { RfqSummaryCard } from "@/components/RfqSummaryCard";
-import { SourcingPlanCard } from "@/components/SourcingPlanCard";
 import { StoreProfileCard } from "@/components/StoreProfileCard";
 import { WholesaleResearchCard } from "@/components/WholesaleResearchCard";
-import { PERSONAS } from "@/data/personas";
-import { DEMO_STORE_URLS } from "@/data/storeFixtures";
-import { LOTS } from "@/data/lots";
 import { track } from "@/lib/analytics";
 import { DEFAULT_POLICY } from "@/lib/procurement/policy";
-import type { BuyingPolicy, ProcuredLot } from "@/lib/procurement/types";
 import type { AgentResult } from "@/lib/types";
 import { rfqSummaryLine } from "@/lib/rfq/format";
 import { applyRfqPatch, type RfqPatch } from "@/lib/rfq/resolve";
 import { readAgentStream, type AgentProgress } from "@/lib/progress";
-
-interface ActiveDeal {
-  items: DealItem[];
-  negotiate: boolean;
-  policy: BuyingPolicy;
-  budget: number;
-}
-
-const toItem = (lotId: string): DealItem => {
-  const lot = LOTS.find((l) => l.id === lotId)!;
-  return {
-    lotId,
-    title: lot.title,
-    wholesaler: lot.wholesaler,
-    listPrice: lot.wholesalePrice,
-    image: lot.image
-  };
-};
 
 interface UserTurn {
   role: "user";
@@ -62,9 +36,7 @@ export function ChatPanel() {
   const [progress, setProgress] = useState<AgentProgress[]>([]);
   const runningRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const [policy, setPolicy] = useState<BuyingPolicy>(DEFAULT_POLICY);
   const [lastRequest, setLastRequest] = useState<AgentRequest | null>(null);
-  const [deal, setDeal] = useState<ActiveDeal | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLElement | null>(null);
 
@@ -105,7 +77,7 @@ export function ChatPanel() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
-        body: JSON.stringify({ ...request, policy })
+        body: JSON.stringify({ ...request, policy: DEFAULT_POLICY })
       });
       if (!res.ok) {
         const failure = await res.json();
@@ -133,74 +105,24 @@ export function ChatPanel() {
   const editRfq = (result: AgentResult, patch: RfqPatch) => {
     track("rfq_edited", { fields: Object.keys(patch).length });
     return run(
-      { brief: result.dna.brief, rfq: patch },
+      { ...(result.store ? { storeUrl: result.store.url } : { brief: result.dna.brief }), rfq: patch },
       `Edited RFQ: ${rfqSummaryLine(applyRfqPatch(result.rfq, patch, "edited"))}`
     );
   };
-
-  const openDeal = (result: AgentResult, lotIds: string[], negotiate: boolean) =>
-    setDeal({ items: lotIds.map(toItem), negotiate, policy: result.policy, budget: result.plan.budget });
 
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       {/* Sidebar — below chat on narrow viewports so results are not off-screen */}
       <aside className="order-2 space-y-4 lg:order-1">
         <div className="card p-4">
-          <h2 className="text-sm font-semibold">Store personas</h2>
-          <p className="mt-1 text-xs text-paper/55">
-            Personas with a site URL run store analysis. The rest send a typed brief.
-          </p>
-          <div className="mt-3 space-y-2">
-            {PERSONAS.map((p) => (
-              <div key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => (p.url ? analyseStore(p.url) : submit(p.brief))}
-                  disabled={loading}
-                  title={p.url ? `Analyse ${p.url}` : p.brief}
-                  className="flex w-full items-start gap-3 rounded-xl border border-ink-line bg-ink/40 px-3 py-2 text-left transition hover:border-brand-500/60 hover:bg-ink/70 disabled:opacity-50"
-                >
-                  <span className="text-xl leading-6">{p.emoji}</span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{p.name}</span>
-                    <span className="block text-xs text-paper/50">{p.location}</span>
-                    <span className="mt-1 block text-xs leading-snug text-paper/70">{p.blurb}</span>
-                  </span>
-                </button>
-                {p.url && (
-                  <a
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-11 mt-1 inline-block text-[11px] text-brand-300 hover:underline"
-                  >
-                    {new URL(p.url).hostname.replace(/^www\./, "")} ↗
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card p-4">
           <h2 className="text-sm font-semibold">Analyse a store URL</h2>
           <p className="mt-1 text-xs text-paper/55">
-            Reads the public storefront and product collections. Sample stores use a saved profile if their site is unavailable.
+            Reads public stock pages and links each finding to its source. Unavailable pages are reported as gaps.
           </p>
           <StoreUrlInput onAnalyse={analyseStore} disabled={loading} />
         </div>
 
-        <PolicyPanel
-          policy={policy}
-          onChange={setPolicy}
-          canApply={Boolean(lastRequest) && !loading}
-          onApply={() => {
-            if (!lastRequest) return;
-            track("policy_applied", { ...policy });
-            if ("storeUrl" in lastRequest) analyseStore(lastRequest.storeUrl);
-            else run(lastRequest, lastRequest.brief);
-          }}
-        />
+
       </aside>
 
       {/* Conversation — first on mobile so persona / send results are on screen */}
@@ -223,22 +145,7 @@ export function ChatPanel() {
                 key={i}
                 result={turn.result}
                 disabled={loading}
-                onBuy={(m) =>
-                  openDeal(
-                    turn.result,
-                    [m.lot.id],
-                    turn.result.policy.autoNegotiate || m.policy.status !== "compliant"
-                  )
-                }
-                onNegotiate={(m) => openDeal(turn.result, [m.lot.id], true)}
-                onEditRfq={turn.result.store ? undefined : (patch) => editRfq(turn.result, patch)}
-                onBuyPlan={() =>
-                  openDeal(
-                    turn.result,
-                    turn.result.plan.lines.map((l) => l.lotId),
-                    turn.result.policy.autoNegotiate
-                  )
-                }
+                onEditRfq={(patch) => editRfq(turn.result, patch)}
               />
             )
           )}
@@ -296,23 +203,16 @@ export function ChatPanel() {
         </form>
       </section>
 
-      {deal && <DealModal {...deal} onClose={() => setDeal(null)} />}
     </div>
   );
 }
 
 function AgentMessage({
   result,
-  onBuy,
-  onNegotiate,
-  onBuyPlan,
   onEditRfq,
   disabled
 }: {
   result: AgentResult;
-  onBuy: (m: ProcuredLot) => void;
-  onNegotiate: (m: ProcuredLot) => void;
-  onBuyPlan: () => void;
   onEditRfq?: (patch: RfqPatch) => void;
   disabled?: boolean;
 }) {
@@ -324,7 +224,7 @@ function AgentMessage({
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">LotPilot</span>
             <span className="chip">
-              {result.source === "llm" ? `LLM · ${result.llmModel ?? "live"}` : "Deterministic"}
+              Source-backed retrieval
             </span>
           </div>
           <p className="mt-1.5 text-sm leading-relaxed text-paper/85">{result.summary}</p>
@@ -335,21 +235,11 @@ function AgentMessage({
 
       {result.rfq && <RfqSummaryCard rfq={result.rfq} onEdit={onEditRfq} disabled={disabled} />}
 
-      {result.wholesale && result.wholesale.leads.length > 0 && (
+      {result.wholesale && (
         <WholesaleResearchCard research={result.wholesale} />
       )}
 
-      <p className="text-xs text-paper/55">Demo inventory · Illustrative prices and supplier scores. Negotiation and checkout are simulated.</p>
-      <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
-      {result.matches.length > 0 && (
-        <MatchesPanel
-          matches={result.matches}
-          onBuy={onBuy}
-          onNegotiate={onNegotiate}
-          disabled={disabled}
-        />
-      )}
     </div>
   );
 }
@@ -390,9 +280,9 @@ function StoreUrlInput({
           Analyse
         </button>
       </form>
-      <div className="mt-2.5 text-[10px] uppercase tracking-wide text-paper/40">Demo stores</div>
+      <div className="mt-2.5 text-[10px] uppercase tracking-wide text-paper/40">Public stores</div>
       <div className="mt-1 flex flex-wrap gap-1.5">
-        {DEMO_STORE_URLS.map((demo) => (
+        {["https://www.atikalondon.co.uk/", "https://sovintagelondon.com/"].map((demo) => (
           <button
             key={demo}
             type="button"
@@ -414,8 +304,8 @@ function EmptyState({ onPick }: { onPick: (brief: string) => void }) {
       <AgentAvatar large />
       <h2 className="mt-4 font-display text-2xl">Describe your shop</h2>
       <p className="mt-2 max-w-md text-sm text-paper/60">
-        LotPilot reads your store DNA, scans the wholesale catalog, and ranks lots by fit and
-        projected margin. Pick a persona on the left or type a brief below.
+        LotPilot reads your stock pages and retrieves relevant supplier descriptions.
+        Add a public store URL or describe your products and buying budget.
       </p>
       <button onClick={() => onPick(SUGGESTIONS[0])} className="btn-primary mt-5">
         Try the Shoreditch Y2K example
@@ -429,7 +319,7 @@ function ThinkingBubble({ progress }: { progress: AgentProgress[] }) {
     <div className="flex gap-3">
       <AgentAvatar />
       <div className="rounded-2xl rounded-tl-sm bg-ink/70 px-4 py-3" role="status" aria-live="polite">
-        <p className="mb-2 text-sm font-semibold">Finding your next buy</p>
+        <p className="mb-2 text-sm font-semibold">Researching your suppliers</p>
         <ul className="space-y-2 text-xs text-paper/70">
           {progress.map((step, index) => (
             <li key={step.stage} className="flex items-center gap-2">

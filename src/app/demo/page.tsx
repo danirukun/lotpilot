@@ -4,7 +4,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 
 export const metadata: Metadata = {
   title: "LotPilot live agent",
-  description: "Describe your shop. LotPilot ranks matching wholesale lots by fit and margin."
+  description: "Describe your shop. LotPilot retrieves relevant supplier sources."
 };
 
 export default function DemoPage() {
@@ -15,11 +15,11 @@ export default function DemoPage() {
         <div className="mb-6">
           <span className="label-eyebrow">Live agent</span>
           <h1 className="mt-2 font-display text-3xl tracking-tight sm:text-4xl">
-            Wholesale buying agent
+            Wholesale supplier research
           </h1>
           <p className="mt-2 max-w-2xl text-paper/65">
-            No sign-up. Describe your store or pick a persona. LotPilot ranks lots by fit and
-            margin, then runs a simulated buy.
+            Describe your store or provide its URL. Review sourced supplier leads and confirm stock,
+            grades and prices directly with the supplier.
           </p>
         </div>
         <ChatPanel />

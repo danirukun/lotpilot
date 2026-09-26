@@ -15,7 +15,7 @@ export type Vertical =
   | "food-drink"
   | "general";
 
-export type SizeBucket = "micro" | "small" | "medium" | "large";
+export type SizeBucket = "unknown" | "micro" | "small" | "medium" | "large";
 
 export interface SeoData {
   title?: string;
@@ -97,9 +97,14 @@ export interface StoreProfile {
     bucket: SizeBucket;
     label: string;
     drivers: string[];
-    suggestedBudget: number;
-    budgetRange: [number, number];
+    suggestedBudget?: number;
+    budgetRange?: [number, number];
   };
+  evidence?: StorePageEvidence[];
+  businessRole?: "retailer" | "market-event" | "unknown";
+  freshness?: "historical" | "unverified";
+  observedCategories?: string[];
+  eraRanges?: string[];
   fashionFit: boolean;
   dna: StoreDNA;
   brief: string;
@@ -111,4 +116,15 @@ export interface StoreProfile {
     cached?: boolean;
     cachedAt?: string;
   };
+}
+
+export interface StorePageEvidence {
+  url: string;
+  title: string;
+  text: string;
+  fetchedAt: string;
+  publishedDates: string[];
+  categories: string[];
+  brands: string[];
+  decades: string[];
 }

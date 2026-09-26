@@ -1,5 +1,8 @@
 "use client";
 
+import { CATEGORY_KEYWORDS } from "@/lib/parseBrief";
+import type { Category } from "@/lib/types";
+
 import { useState } from "react";
 import { rfqChips, rfqSummaryLine } from "@/lib/rfq/format";
 import type { RfqPatch } from "@/lib/rfq/resolve";
@@ -93,6 +96,7 @@ function RfqEditForm({
   const [price, setPrice] = useState(rfq.maxPricePerPiece?.toString() ?? "");
   const [budget, setBudget] = useState(rfq.budget?.toString() ?? "");
   const [letters, setLetters] = useState<RfqGradeLetter[]>(rfq.gradeLetters);
+  const [categories, setCategories] = useState<Category[]>(rfq.categories);
   const [brands, setBrands] = useState(rfq.brands.join(", "));
 
   const toggle = (l: RfqGradeLetter) =>
@@ -105,6 +109,7 @@ function RfqEditForm({
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit({
+          categories,
           pieceRange: { min: toNum(min), max: toNum(max) },
           maxPricePerPiece: toNum(price) ?? null,
           budget: toNum(budget) ?? null,
@@ -116,6 +121,12 @@ function RfqEditForm({
         });
       }}
     >
+      <fieldset className="sm:col-span-2">
+        <legend className="mb-2 text-xs text-paper/65">Confirm your current product categories</legend>
+        <div className="flex flex-wrap gap-2">{Object.keys(CATEGORY_KEYWORDS).map(c => <label key={c} className="chip cursor-pointer">
+          <input type="checkbox" checked={categories.includes(c as Category)} onChange={e => setCategories(previous => e.target.checked ? [...previous, c as Category] : previous.filter(value => value !== c))} className="mr-1" />{c}
+        </label>)}</div>
+      </fieldset>
       <Field label="Pieces per lot">
         <div className="flex items-center gap-2">
           <NumberInput value={min} onChange={setMin} placeholder="min" />

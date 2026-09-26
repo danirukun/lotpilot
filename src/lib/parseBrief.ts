@@ -8,7 +8,7 @@ export const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   workwear: ["workwear", "work wear", "carhartt", "dickies", "chore", "utility"],
   preppy: ["preppy", "prep", "ivy", "collegiate", "ralph", "polo"],
   cottagecore: ["cottagecore", "prairie", "cottage", "ditsy", "floral tea"],
-  boho: ["boho", "bohemian", "festival", "hippie", "kaftan"],
+  boho: ["boho", "bohemian", "festival style", "festival-style", "hippie", "kaftan"],
   minimal: ["minimal", "quiet luxury", "quiet-luxury", "clean", "muted", "scandi"],
   sportswear: ["sportswear", "sports", "jersey", "trackie", "tracksuit", "athleisure", "gym"],
   clubwear: ["clubwear", "club", "going out", "going-out", "night out", "rave"],
@@ -35,7 +35,7 @@ export const CATEGORY_KEYWORDS: Record<FashionCategory, string[]> = {
   dresses: ["dress", "dresses", "slip", "maxi", "midi", "kaftan"],
   sportswear: [
     "sportswear", "jersey", "trackie", "tracksuit", "athleisure", "sports",
-    "football kit", " kits ", " kits,", "training top", "drill top", "track top"
+    "football shirt", "football kit", " kits ", " kits,", "training top", "drill top", "track top"
   ],
   accessories: ["accessor", "scarf", "scarves", "belt", "bag", "sunglasses", "tie", " caps", " cap "],
   footwear: ["footwear", "shoe", "sneaker", "trainer", "boot", "docs", "doc marten"]
@@ -61,7 +61,7 @@ const GRADE_MAP: Record<string, Grade> = {
 
 /** Deterministically extract structured store DNA from a free-text brief. */
 export function parseBrief(brief: string): StoreDNA {
-  const text = ` ${brief.toLowerCase()} `;
+  const text = ` ${normalizeStockText(brief).toLowerCase()} `;
 
   const aesthetics = Object.entries(AESTHETIC_KEYWORDS)
     .filter(([, kws]) => kws.some((kw) => text.includes(kw)))
@@ -128,4 +128,9 @@ function parseLocation(brief: string): string | undefined {
   const lower = brief.toLowerCase();
   const hit = KNOWN_PLACES.find((p) => lower.includes(p));
   return hit ? hit.charAt(0).toUpperCase() + hit.slice(1) : undefined;
+}
+
+/** Normalize typography without inventing stock facts. */
+export function normalizeStockText(text: string): string {
+  return text.normalize("NFKC").replace(/[’‘`]/g, "'").replace(/\b(19\d0|20\d0|[5-9]0)'s\b/gi, "$1s");
 }

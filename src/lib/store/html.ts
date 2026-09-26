@@ -2,6 +2,9 @@ import { parse, type HTMLElement } from "node-html-parser";
 import type { JsonLdBusiness, Platform, SeoData } from "@/lib/store/types";
 
 export interface ParsedPage {
+  text: string;
+  links: { href: string; text: string }[];
+  publishedDates: string[];
   seo: SeoData;
   platform: Platform;
   navCategories: string[];
@@ -52,10 +55,21 @@ export function parsePage(html: string, domain: string): ParsedPage {
     jsonLdTypes: [...new Set(jsonLd.flatMap((n) => types(n)))]
   };
 
+  const navCategories = readNavCategories(root);
+  const links = root.querySelectorAll("a[href]").map(a => ({ href: a.getAttribute("href")!, text: clean(a.text) ?? "" }));
+  const publishedDates = [...root.querySelectorAll("time[datetime]").map(t => t.getAttribute("datetime")!),
+    meta("property", "article:published_time")].filter((d): d is string => Boolean(d));
+  for (const el of root.querySelectorAll("script, style, nav, header, footer, noscript, [role=banner], [role=navigation], .cookie-banner")) el.remove();
+  const main = root.querySelector("main") ?? root.querySelector("article") ?? root.querySelector("#content") ?? root.querySelector("body") ?? root;
+  const text = (main.structuredText || main.text).replace(/[^\S\n]+/g, " ").trim().slice(0, 24000);
+  for (const date of text.matchAll(/\b(?:Jan(?:uary)?|Feb(?:ruary)?|March|April|May|June|July|August|Sept?(?:ember)?|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,]?\s+(?:19|20)\d{2}\b/gi)) {
+    publishedDates.push(date[0].replace(/(\d)(st|nd|rd|th)/, "$1"));
+  }
   return {
+    text, links, publishedDates: [...new Set(publishedDates)],
     seo,
     platform: detectPlatform(html, domain),
-    navCategories: readNavCategories(root),
+    navCategories,
     business: readBusiness(jsonLd)
   };
 }

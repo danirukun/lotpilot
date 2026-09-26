@@ -10,7 +10,7 @@ import { LOTS } from "../src/data/lots";
 import type { HybridHit } from "../src/lib/wholesale/search";
 
 function hit(overrides: Partial<HybridHit>): HybridHit {
-  return { id: 1, source: "thewholesaler", external_id: "supplier-1", name: "Denim Supplier", url: "https://example.com/denim", category: "Denim", verticals: ["clothing"], categories: ["denim"], aesthetics: ["vintage"], content: "Wholesale denim", scraped_at: "2026-09-26T12:00:00Z", rrf_score: 0.04, rank_fts: 1, rank_trgm: 2, rank_semantic: 1, ...overrides };
+  return { id: 1, source: "thewholesaler", external_id: "supplier-1", name: "Denim Supplier", url: "https://example.com/denim", category: "Denim", verticals: ["clothing"], categories: ["denim"], aesthetics: ["vintage"], content: "Wholesale vintage denim", scraped_at: "2026-09-26T12:00:00Z", source_url: "https://example.com/denim", evidence_version: 2, rrf_score: 0.04, rank_fts: 1, rank_trgm: 2, rank_semantic: 1, ...overrides };
 }
 
 test("directory query contains alternative product terms, not mandatory boilerplate", () => {
@@ -20,15 +20,15 @@ test("directory query contains alternative product terms, not mandatory boilerpl
   assert.doesNotMatch(query, /thewholesaler|UK wholesale suppliers/);
 });
 
-test("Supabase RPC transport failure degrades to directory fallback", async () => {
+test("Supabase RPC transport failure reports unavailable without fixtures", async () => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-key";
   const original = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error("Network unavailable"); };
   try {
     const result = await researchWholesale(parseBrief("vintage denim"), undefined, { refresh: true });
-    assert.equal(result.mode, "index");
-    assert.ok(result.leads.length > 0);
+    assert.equal(result.mode, "unavailable");
+    assert.equal(result.leads.length, 0);
     assert.ok(result.notes.some(n => /unavailable|failed/i.test(n)));
   } finally { globalThis.fetch = original; }
 });
@@ -42,12 +42,13 @@ test("changing embedding configuration never queries hash index with another mod
     urls.push(String(input));
     if (String(input).includes("api.openai.com")) return new Response("unavailable", { status: 503 });
     const body = JSON.parse(String(init?.body));
-    assert.equal(body.query_embedding, null, "incompatible vectors must be disabled");
+    assert.equal(body.query_embedding, undefined, "hash vectors must never be sent");
+    assert.match(String(input), /wholesale_grounded_search/);
     return Response.json([]);
   };
   try {
     const result = await searchWholesaleRag("denim");
-    assert.equal(result?.model, "keyword-only");
+    assert.equal(result?.model, "lexical-rrf-v2");
     assert.ok(urls.every(url => !url.includes("api.openai.com")));
   } finally {
     globalThis.fetch = original;
@@ -85,7 +86,7 @@ test("enabling live retrieval bypasses cached offline research", async () => {
   delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const dna = parseBrief("vintage denim in Leeds");
   const offline = await researchWholesale(dna, undefined, { refresh: true });
-  assert.equal(offline.mode, "index");
+  assert.equal(offline.mode, "unavailable");
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://cache-test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-key";
   const original = globalThis.fetch;
@@ -105,7 +106,7 @@ test("a transient live outage does not cache fallback results for the next reque
   const original = globalThis.fetch;
   globalThis.fetch = async () => new Response("unavailable", { status: 503 });
   try {
-    assert.equal((await researchWholesale(dna, undefined, { refresh: true })).mode, "index");
+    assert.equal((await researchWholesale(dna, undefined, { refresh: true } )).mode, "unavailable");
     globalThis.fetch = async () => Response.json([hit({})]);
     assert.equal((await researchWholesale(dna)).mode, "rag");
   } finally { globalThis.fetch = original; }

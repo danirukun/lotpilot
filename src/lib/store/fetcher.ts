@@ -10,7 +10,7 @@ export function normalizeUrl(input: string): URL | null {
   if (!trimmed) return null;
   try {
     const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
-    if (!["http:", "https:"].includes(url.protocol)) return null;
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.port) return null;
     if (!url.hostname.includes(".") || PRIVATE_HOST.test(url.hostname)) return null;
     return url;
   } catch {
@@ -25,11 +25,23 @@ export async function fetchText(url: string, timeoutMs = 6000): Promise<string |
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(parsed, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { "User-Agent": UA, Accept: "text/html,application/json;q=0.9,*/*;q=0.5" }
-    });
+    let target = parsed;
+    let res: Response | undefined;
+    for (let hop = 0; hop < 5; hop++) {
+      res = await fetch(target, {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: { "User-Agent": UA, Accept: "text/html,application/json;q=0.9,*/*;q=0.5" }
+      });
+      if (![301, 302, 303, 307, 308].includes(res.status)) break;
+      const location = res.headers.get("location");
+      await res.body?.cancel().catch(() => undefined);
+      const next = location ? normalizeUrl(new URL(location, target).toString()) : null;
+      if (!next) return null;
+      target = next;
+      res = undefined;
+    }
+    if (!res) return null;
     if (!res.ok || !res.body || (res.url && !normalizeUrl(res.url))) return null;
 
     const reader = res.body.getReader();

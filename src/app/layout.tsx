@@ -19,12 +19,12 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "LotPilot, AI wholesale buying agent",
   description:
-    "LotPilot learns your store DNA, finds matching secondhand wholesale lots, scores fit and margin, and completes the buy. Built for independent UK retailers with their own physical and online stores.",
-  metadataBase: new URL("https://lotpilot.vercel.app"),
+    "LotPilot reads your storefront and retrieves relevant wholesale supplier sources for independent UK retailers.",
+  metadataBase: new URL("https://lotpilot-ten.vercel.app"),
   openGraph: {
     title: "LotPilot, AI wholesale buying agent",
     description:
-      "Describe your shop. LotPilot ranks wholesale lots by fit and margin and completes the buy.",
+      "Describe your shop. LotPilot finds relevant wholesale supplier sources.",
     type: "website"
   }
 };
