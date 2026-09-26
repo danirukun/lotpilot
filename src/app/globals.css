@@ -70,7 +70,7 @@ body {
 
 .radar-chart .radar-shape,
 .radar-chart .radar-dot {
-  transform-origin: 84px 84px;
+  transform-origin: 100px 90px;
   animation: radar-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

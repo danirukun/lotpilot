@@ -88,10 +88,8 @@ export function LotCard({
           </p>
         )}
 
-        <div className="mt-3 flex items-center gap-3">
-          <div className="mx-auto h-[168px] w-[168px] shrink-0 text-paper">
-            <RadarChart axes={radarAxes} />
-          </div>
+        <div className="mt-2 mx-auto h-[152px] w-[180px] shrink-0 text-paper">
+          <RadarChart axes={radarAxes} />
         </div>
 
         <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-ink-line/80 pt-3 text-sm">
@@ -100,7 +98,7 @@ export function LotCard({
             <div className="font-semibold">{gbp(economics.wholesalePrice)}</div>
           </div>
           <div className="text-right">
-            <span className="text-[10px] uppercase tracking-wide text-paper/45">Landed</span>
+            <span className="text-[10px] uppercase tracking-wide text-paper/45">Profit</span>
             <div className="font-semibold text-brand-300">
               {gbp(metrics.landedProfit)}
               <span className="ml-1.5 text-xs font-medium text-paper/50">

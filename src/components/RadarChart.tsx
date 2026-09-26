@@ -5,10 +5,11 @@ export type RadarAxis = {
   value: number;
 };
 
-const SIZE = 168;
-const CX = SIZE / 2;
-const CY = SIZE / 2;
-const R = 58;
+const W = 200;
+const H = 176;
+const CX = W / 2;
+const CY = H / 2 + 2;
+const R = 52;
 const LEVELS = [0.25, 0.5, 0.75, 1];
 
 function clamp01(n: number): number {
@@ -21,17 +22,30 @@ function point(i: number, n: number, radius: number): { x: number; y: number } {
 }
 
 function ringPath(n: number, scale: number): string {
-  return Array.from({ length: n }, (_, i) => {
-    const p = point(i, n, R * scale);
-    return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
-  }).join(" ") + " Z";
+  return (
+    Array.from({ length: n }, (_, i) => {
+      const p = point(i, n, R * scale);
+      return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    }).join(" ") + " Z"
+  );
 }
 
-function labelAnchor(i: number, n: number): "start" | "middle" | "end" {
-  const angle = (-Math.PI / 2 + (i * 2 * Math.PI) / n + 2 * Math.PI) % (2 * Math.PI);
-  if (angle > 0.35 && angle < Math.PI - 0.35) return "start";
-  if (angle > Math.PI + 0.35 && angle < 2 * Math.PI - 0.35) return "end";
-  return "middle";
+function labelPlacement(i: number, n: number): {
+  x: number;
+  y: number;
+  anchor: "start" | "middle" | "end";
+} {
+  const angle = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  const tip = point(i, n, R + 14);
+  const deg = ((angle * 180) / Math.PI + 360) % 360;
+  // Top vertex
+  if (deg < 20 || deg > 340) return { x: tip.x, y: tip.y - 4, anchor: "middle" };
+  // Upper-right / lower-right
+  if (deg >= 20 && deg < 160) return { x: tip.x + 6, y: tip.y, anchor: "start" };
+  // Bottom
+  if (deg >= 160 && deg < 200) return { x: tip.x, y: tip.y + 6, anchor: "middle" };
+  // Lower-left / upper-left
+  return { x: tip.x - 6, y: tip.y, anchor: "end" };
 }
 
 export function RadarChart({
@@ -45,16 +59,17 @@ export function RadarChart({
   if (n < 3) return null;
 
   const values = axes.map((a) => clamp01(a.value));
-  const shape = values
-    .map((v, i) => {
-      const p = point(i, n, R * v);
-      return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
-    })
-    .join(" ") + " Z";
+  const shape =
+    values
+      .map((v, i) => {
+        const p = point(i, n, R * v);
+        return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      })
+      .join(" ") + " Z";
 
   return (
     <svg
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      viewBox={`0 0 ${W} ${H}`}
       className={`radar-chart h-full w-full ${className}`}
       role="img"
       aria-label={axes.map((a) => `${a.label} ${Math.round(a.value)}`).join(", ")}
@@ -108,22 +123,21 @@ export function RadarChart({
         );
       })}
       {axes.map((a, i) => {
-        const tip = point(i, n, R + 18);
-        const anchor = labelAnchor(i, n);
+        const { x, y, anchor } = labelPlacement(i, n);
         return (
           <text
             key={a.label}
-            x={tip.x}
-            y={tip.y}
+            x={x}
+            y={y}
             textAnchor={anchor}
             dominantBaseline="middle"
             className="fill-paper/55"
             style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.02em" }}
           >
-            <tspan x={tip.x} dy="-0.35em">
+            <tspan x={x} dy="-0.35em">
               {a.label}
             </tspan>
-            <tspan x={tip.x} dy="1.15em" className="fill-paper/80" style={{ fontSize: 10 }}>
+            <tspan x={x} dy="1.15em" className="fill-paper/80" style={{ fontSize: 10 }}>
               {Math.round(Math.max(0, Math.min(100, a.value)))}
             </tspan>
           </text>
