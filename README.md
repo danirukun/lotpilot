@@ -17,6 +17,10 @@ The retailer types a short brief in chat. For example: "Y2K thrift shop in Shore
 
 LotPilot runs fully offline. It needs no paid API keys. Deterministic code does all ranking, policy checks, negotiation, and economics. An optional language model only writes the summary text.
 
+## Hackathon venue (Fleek)
+
+This demo was built for a hackathon hosted around [Fleek](https://www.joinfleek.com/) (B2B wholesale secondhand). LotPilot is **not** Fleek. It is **not** built on Fleek. The product targets independent UK retailers first. User-facing copy stays retailer-centric.
+
 ## Hackathon track
 
 - **Track:** Agentic Commerce.
@@ -82,7 +86,9 @@ A store URL run uses the suggested budget.
 
 The classifier uses weighted keywords from the name, SEO data, categories, product feed, and web research. Maps store types add more weight. The classes are: clothing, footwear, accessories, electronics, home, beauty, books and media, toys and games, sports and outdoor, food and drink, and general.
 
-The wholesale catalog is secondhand fashion. If the store is not clothing, footwear, accessories, or general, the agent still shows sample lot cards. The summary and the profile card say that the catalog is fashion and the matches are weak. The agent does not build a full opening buy. It uses at most a £500 exploratory cap and zero to two lots, or no plan if nothing clears policy.
+The default catalog is secondhand fashion (43 lots). **Electronics stores** (for example the `gadgetgrid.co.uk` fixture) rank a separate refurbished-tech catalog (8 lots: phones, laptops, headphones, cables, tablets, gaming, accessories). Fashion personas never see electronics lots. GadgetGrid never sees fashion lots.
+
+Other non-fashion verticals (home, beauty, and so on) still get the fashion catalog with a weak-match banner. The agent uses at most a £500 exploratory cap and zero to two lots.
 
 ## RFQ matching
 
@@ -197,10 +203,11 @@ The engine is in `src/lib/procurement/negotiation.ts`.
 
 ## How to run
 
-Install the dependencies:
+Install dependencies and copy the env template:
 
 ```bash
 npm install
+cp .env.example .env.local
 ```
 
 Run the development server:
@@ -209,7 +216,7 @@ Run the development server:
 npm run dev
 ```
 
-Open http://localhost:3000 in a browser.
+Open http://localhost:3000 and http://localhost:3000/demo in a browser.
 
 To run a production build:
 
@@ -222,7 +229,20 @@ The app starts on port 3000 by default. To use another port, add `-- -p <port>` 
 
 ## Environment variables
 
-All environment variables are optional. The demo works with none of them. See [`.env.example`](.env.example) for the full list.
+All environment variables are optional. The demo works with none of them. Placeholders in [`.env.example`](.env.example):
+
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | OpenAI narration |
+| `OPENAI_MODEL` | OpenAI model name |
+| `ANTHROPIC_API_KEY` | Anthropic narration |
+| `ANTHROPIC_MODEL` | Anthropic model name |
+| `NEXT_PUBLIC_POSTHOG_KEY` | PostHog analytics |
+| `NEXT_PUBLIC_POSTHOG_HOST` | PostHog host |
+| `COMMERCE_LAYER_CLIENT_ID` | Commerce Layer checkout |
+| `COMMERCE_LAYER_ENDPOINT` | Commerce Layer API base URL |
+| `TAVILY_API_KEY` | Tavily web research (keep in `.env.local` only) |
+| `GOOGLE_MAPS_API_KEY` | Google Places lookup for store URLs |
 
 - **No keys.** The agent uses the deterministic engine and a canned summary. Checkout returns a mock order. This is the default demo path.
 - **LLM (optional).** Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` to switch on live narration. The model only writes the summary text. It never changes the ranking, the policy verdicts, the negotiation, or the economics. The request has a 12-second timeout. On any failure the app falls back to the canned summary.
@@ -244,7 +264,7 @@ Then add one key and restart the server.
 1. **Parse the brief.** `src/lib/parseBrief.ts` reads the free text. It extracts aesthetics, categories, brands, decades, budget, location, and a grade floor. For a store URL, `src/lib/store/extract.ts` builds the DNA from the store instead.
 2. **Resolve the RFQ.** `src/lib/rfq/resolve.ts` merges DNA with parsed or edited RFQ fields.
 3. **Rank and procure.** `src/lib/rfq/rank.ts` scores the catalog on RFQ fit and supplier score, then `procure.ts` adds benchmarks, landed economics, risk, decision score, and policy verdict.
-4. **Plan.** `buildSourcingPlan` selects the opening buy with negotiated price estimates. Non-fashion stores get an exploratory cap only.
+4. **Plan.** `buildSourcingPlan` selects the opening buy with negotiated price estimates. Electronics stores get a full tech plan. Other non-fashion stores get an exploratory fashion cap only.
 5. **Summarise.** `src/lib/agent.ts` builds the result. If an LLM key is present, `src/lib/llm.ts` writes the narration. If not, `src/lib/summary.ts` writes a canned but specific summary.
 6. **Negotiate and check out.** `src/lib/checkout.ts` negotiates the basket against the policy and builds the order.
 
@@ -257,8 +277,8 @@ API routes:
 
 Seed data:
 
-- `src/data/lots.ts` — 43 wholesale lots with grade, piece count, wholesale price, resale price, and sell-through.
-- `src/data/suppliers.ts` — 10 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
+- `src/data/lots.ts` — 43 fashion lots plus 8 electronics lots (`catalog: "electronics"`).
+- `src/data/suppliers.ts` — 13 wholesalers with scorecard data, negotiation flexibility, early-payment and volume discounts, and shipping.
 - `src/data/benchmarks.ts` — 90-day comparable price per piece for each lot.
 - `src/data/personas.ts` — 7 store personas.
 - `src/data/supplierScorecards.ts` — reliability, grade consistency, fill rate, and QC metrics per supplier.
@@ -285,14 +305,16 @@ Use this script for a live presentation. The sample lines are for the presenter 
 1. **Open the app (0:00).** Go to http://localhost:3000. Say: "This is LotPilot. It is an AI buying agent for independent UK retailers who run a shop and a website and buy vintage stock from many wholesalers."
 2. **Go to the live agent (0:15).** Click "Launch agent". Say: "No sign-up. The retailer describes the shop. The sidebar holds the buying policy."
 3. **Neon Rewind persona (0:25).** Click "Neon Rewind". Say: "Y2K thrift in Shoreditch, £2000 budget." Point at the RFQ line. Say: "The agent turned the brief into a quote request."
-4. **Sourcing plan (0:40).** Say: "Opening buy: three lots, £1,790 after negotiation, £150 under list. Top pick: Y2K Baby Tees Bundle from Rewind Bales — a key supplier."
+4. **Sourcing plan (0:40).** Say: "Opening buy: three lots, £1,790 spend, £150 saved, ~90% landed ROI. Top pick: Y2K Baby Tees Bundle. RFQ line: `Y2K clubwear denim & tops, budget £2k`."
 5. **Lot card (0:55).** Expand the supplier scorecard and RFQ checks. Say: "RFQ match, supplier score, policy checks — all visible."
 6. **Negotiate (1:10).** Click "Negotiate" on the top card. Say: "Market comparables, then early payment. Deal at £495, £45 under list."
-7. **RFQ-style brief (1:25).** Paste: `I need 80-120 Y2K tops, grade A or B, max £12 a piece, budget £2k`. Say: "Same shop DNA, but now the rank follows the RFQ: piece count, grade, and price cap." Point at `80–120 Y2K tops, grade A/B, ≤£12/pc, budget £2k`.
-8. **Classic Football Shirts (1:45).** Click that persona. Say: "Four lots, £2,880 spend, £260 saved. Top pick: 90s English League Football Shirts from Terrace Archive."
-9. **Policy tweak (2:00).** Set min grade to A and max lot price to £600. Re-run. Say: "Tighter rules change the buy. Each exclusion names the rule."
-10. **Store URLs (2:15).** Click `neonrewind.co.uk`. Say: "It reads SEO, categories, and Maps — small Y2K clothing, £2,500 budget." Click `gadgetgrid.co.uk`. Say: "Electronics store. The banner says the catalog is secondhand fashion. No full fashion plan — only weak matches."
-11. **Close (2:50).** Say: "Ranking, RFQ scoring, policy, and negotiation are deterministic. The optional LLM only writes the summary."
+7. **RFQ-style brief (1:25).** Paste: `I need 80-120 Y2K tops, grade A or B, max £12 a piece, budget £2k`. Say: "RFQ: `80–120 Y2K clubwear denim & tops, grade A/B, ≤£12/pc, budget £2k`. Plan: three lots, £1,795 spend, £165 saved."
+8. **MAXGRG (1:35).** Click MAXGRG. Say: "Four lots, £2,335 spend, £180 saved. Top pick: Vintage Levi's Jeans Mixed Wash Bundle."
+9. **Levi RFQ (1:45).** Paste: `Looking for 30-50 vintage Levi's or Wrangler jeans, grade A only, under £30 per piece, £2500`. Say: "RFQ: `30–50 vintage streetwear Levi's / Wrangler denim & outerwear & more, grade A, ≤£30/pc, budget £2.5k`. Three lots, £2,095 spend."
+10. **Classic Football Shirts (1:55).** Click that persona. Say: "Four lots, £2,880 spend, £260 saved, ~83% ROI. Top pick: 90s English League Football Shirts."
+11. **Policy tweak (2:05).** Set min grade to A and max lot price to £600. Re-run. Say: "Tighter rules change the buy. Each exclusion names the rule."
+12. **Store URLs (2:15).** Click `neonrewind.co.uk`. Say: "Small Y2K clothing, £2,500 budget from size signals." Click `gadgetgrid.co.uk`. Say: "Five refurbished tech lots, £2,740 spend, £231 saved. Top pick: Refurbished Business Laptops — Dell & HP. No fashion lots."
+13. **Close (2:50).** Say: "Ranking, RFQ scoring, policy, and negotiation are deterministic. The optional LLM only writes the summary."
 
 ## Deployment
 

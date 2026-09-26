@@ -4,7 +4,7 @@ import type { Rfq } from "@/lib/rfq/types";
 
 export type Grade = "A" | "B" | "AB" | "Mixed";
 
-export type Category =
+export type FashionCategory =
   | "denim"
   | "outerwear"
   | "knitwear"
@@ -14,10 +14,25 @@ export type Category =
   | "accessories"
   | "footwear";
 
+export type ElectronicsCategory =
+  | "smartphones"
+  | "laptops"
+  | "headphones"
+  | "cables-accessories"
+  | "tablets"
+  | "gaming"
+  | "refurb-mixed";
+
+export type Category = FashionCategory | ElectronicsCategory;
+
+export type LotCatalog = "fashion" | "electronics";
+
 export interface WholesaleLot {
   id: string;
   title: string;
   wholesaler: string;
+  /** Defaults to fashion when omitted (seeded fashion lots). */
+  catalog?: LotCatalog;
   category: Category;
   grade: Grade;
   pieceCount: number;

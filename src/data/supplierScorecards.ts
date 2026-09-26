@@ -84,6 +84,27 @@ export const SUPPLIER_METRICS: Record<string, SupplierMetrics> = {
     fillRate: 95,
     qcReturnRisk: 2.9,
     ordersTracked: 276
+  },
+  "Digbeth Devices (Birmingham)": {
+    reliability: 92,
+    gradeConsistency: 92,
+    fillRate: 95,
+    qcReturnRisk: 3.2,
+    ordersTracked: 318
+  },
+  "Circuit Surplus (Birmingham)": {
+    reliability: 87,
+    gradeConsistency: 86,
+    fillRate: 90,
+    qcReturnRisk: 6.5,
+    ordersTracked: 198
+  },
+  "TechCycle Wholesale (London)": {
+    reliability: 95,
+    gradeConsistency: 94,
+    fillRate: 97,
+    qcReturnRisk: 2.1,
+    ordersTracked: 402
   }
 };
 

@@ -101,10 +101,15 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
         </div>
       </div>
 
-      {!store.fashionFit && (
+      {!store.fashionFit && store.vertical.primary !== "electronics" && (
         <div className="mx-5 mb-4 rounded-xl border border-accent-500/40 bg-accent-500/10 px-3 py-2 text-xs text-accent-400">
           This looks like {/^[aeiou]/i.test(vertical.label) ? "an" : "a"} {vertical.label.toLowerCase()} store. The
           wholesale catalog is secondhand fashion, so matches below are weak.
+        </div>
+      )}
+      {!store.fashionFit && store.vertical.primary === "electronics" && (
+        <div className="mx-5 mb-4 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 py-2 text-xs text-brand-200">
+          Electronics store — ranking refurbished tech wholesale lots (phones, laptops, audio, accessories).
         </div>
       )}
 

@@ -8,9 +8,10 @@ import { resolvePersonaId } from "@/lib/procurement/keySuppliers";
 import { llmParseRfq } from "@/lib/rfq/llm";
 import { selectCandidates } from "@/lib/rfq/rank";
 import { resolveRfq } from "@/lib/rfq/resolve";
+import { resolveCatalog } from "@/lib/catalog";
 import { extractStoreProfile } from "@/lib/store/extract";
 import type { StoreProfile } from "@/lib/store/types";
-import type { AgentResult, StoreDNA } from "@/lib/types";
+import type { AgentResult, LotCatalog, StoreDNA } from "@/lib/types";
 
 export const DEFAULT_BUDGET = 2000;
 
@@ -49,12 +50,14 @@ export async function runAgentFromDna(
   });
   const budget = rfq.budget ?? dna.budget ?? DEFAULT_BUDGET;
 
-  const candidates = selectCandidates(dna, rfq, policy, budget, opts.personaId);
+  const catalog: LotCatalog = store ? resolveCatalog(store) : "fashion";
+  const candidates = selectCandidates(dna, rfq, policy, budget, opts.personaId, catalog);
   const budgetAssumed = rfq.budget === undefined && dna.budget === undefined;
   const nonFashionStore = Boolean(store && !store.fashionFit);
-  const planBudget = nonFashionStore ? Math.min(budget, 500) : budget;
+  const electronicsStore = catalog === "electronics";
+  const planBudget = nonFashionStore && !electronicsStore ? Math.min(budget, 500) : budget;
   const plan = buildSourcingPlan(candidates, policy, planBudget, budgetAssumed, {
-    ...(nonFashionStore
+    ...(nonFashionStore && !electronicsStore
       ? { maxLines: 2, minFit: 55, exploratory: true }
       : {})
   });
@@ -91,6 +94,9 @@ function storePreface(store: StoreProfile): string {
     store.size.suggestedBudget
   )} from the size estimate.`;
   if (store.fashionFit) return read;
+  if (store.vertical.primary === "electronics") {
+    return `${read} I matched refurbished tech wholesale lots to your ${store.vertical.label.toLowerCase()} focus.`;
+  }
   const vertical = store.vertical.label.toLowerCase();
   const article = /^[aeiou]/.test(vertical) ? "an" : "a";
   return `Heads up: the wholesale catalog is secondhand fashion, and ${store.name} looks like ${article} ${vertical} store, so these matches are weak. ${read}`;

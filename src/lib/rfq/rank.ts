@@ -1,6 +1,7 @@
-import { LOTS } from "@/data/lots";
+import { lotsForCatalog } from "@/lib/catalog";
 import { supplierByName } from "@/data/suppliers";
 import { rankLots } from "@/lib/matcher";
+import type { LotCatalog } from "@/lib/types";
 import { KEY_SUPPLIER_BOOST, withPurchaseHistory } from "@/lib/procurement/keySuppliers";
 import { scoreSupplier } from "@/lib/procurement/policy";
 import { procureLot } from "@/lib/procurement/procure";
@@ -22,6 +23,7 @@ export function selectCandidates(
   policy: BuyingPolicy,
   budget: number,
   personaId?: string,
+  catalog: LotCatalog = "fashion",
   limit = 12
 ): ProcuredLot[] {
   const gradeFloor = rfq.grades.length
@@ -29,7 +31,8 @@ export function selectCandidates(
     : rfq.source === "edited"
       ? undefined
       : dna.gradeFloor;
-  return rankLots({ ...dna, budget: rfq.budget ?? dna.budget, gradeFloor }, LOTS.length)
+  const catalogLots = lotsForCatalog(catalog);
+  return rankLots({ ...dna, budget: rfq.budget ?? dna.budget, gradeFloor }, catalogLots, catalogLots.length)
     .map((match) => {
       const rfqMatch = scoreRfq(match, rfq, policy);
       const supplier = withPurchaseHistory(scoreSupplier(supplierByName(match.lot.wholesaler)), personaId);

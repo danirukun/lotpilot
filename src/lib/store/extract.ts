@@ -1,5 +1,6 @@
 import { findFixture } from "@/data/storeFixtures";
 import { cleanCategories, fromShopifyFeeds, readShopifyCatalog } from "@/lib/store/catalog";
+import { deriveElectronicsCategories } from "@/lib/catalog";
 import { classifyVertical, deriveDna, estimateSize, isFashion, VERTICAL_LABEL, type Corpus } from "@/lib/store/classify";
 import { fetchText, normalizeUrl } from "@/lib/store/fetcher";
 import { parsePage, type ParsedPage } from "@/lib/store/html";
@@ -128,7 +129,17 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
   const place = maps?.locality ?? locality;
   const fashionFit = isFashion(vertical.primary) || vertical.primary === "general";
 
-  const dnaDraft = deriveDna(corpus, place, size.suggestedBudget, "");
+  let dnaDraft = deriveDna(corpus, place, size.suggestedBudget, "");
+  if (vertical.primary === "electronics") {
+    const techBrands = ["Apple", "Samsung", "Sony", "Dell", "HP", "Google", "Microsoft", "Nintendo", "OnePlus", "JBL"];
+    const blob = [corpus.name, corpus.seo, corpus.categories, corpus.catalog].join(" ").toLowerCase();
+    dnaDraft = {
+      ...dnaDraft,
+      aesthetics: [],
+      categories: deriveElectronicsCategories(corpus),
+      brands: techBrands.filter((b) => blob.includes(b.toLowerCase())).slice(0, 6)
+    };
+  }
   const brief = composeBrief(name, place, VERTICAL_LABEL[vertical.primary], size.label, catalog.categories, dnaDraft.aesthetics, size.suggestedBudget);
   const dna = { ...dnaDraft, brief };
 

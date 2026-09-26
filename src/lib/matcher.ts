@@ -27,11 +27,61 @@ const AESTHETIC_LABEL: Record<string, string> = {
   custom: "customised / reworked"
 };
 
-/** Rank the seeded catalog against parsed store DNA. Fully deterministic. */
-export function rankLots(dna: StoreDNA, limit = 6): LotScore[] {
-  const scored = LOTS.map((lot) => scoreLot(lot, dna));
+/** Rank a catalog slice against parsed store DNA. Fully deterministic. */
+export function rankLots(dna: StoreDNA, catalogLots: WholesaleLot[] = LOTS, limit = 6): LotScore[] {
+  const scored = catalogLots.map((lot) =>
+    (lot.catalog ?? "fashion") === "electronics" ? scoreElectronicsLot(lot, dna) : scoreLot(lot, dna)
+  );
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit);
+}
+
+function scoreElectronicsLot(lot: WholesaleLot, dna: StoreDNA): LotScore {
+  const economics = computeEconomics(lot);
+  const reasons: string[] = [];
+
+  const categoryHit = dna.categories.includes(lot.category);
+  let categoryPoints = categoryHit ? 45 : dna.categories.length === 0 ? 25 : 8;
+  if (categoryHit) reasons.push(`Matches your ${lot.category.replace("-", " ")} focus`);
+
+  const matchedBrands = lot.brands.filter((b) => dna.brands.includes(b));
+  const brandPoints = Math.min(25, matchedBrands.length * 10);
+  if (matchedBrands.length > 0) reasons.push(`Includes ${matchedBrands.join(", ")}`);
+
+  const titleTokens = lot.title.toLowerCase();
+  const corpusHit = dna.brief.toLowerCase().split(/\W+/).some((w) => w.length > 3 && titleTokens.includes(w));
+  const keywordPoints = corpusHit ? 10 : 5;
+
+  const marginScore = clamp(Math.round((economics.roiPct / 150) * 15), 0, 15);
+  if (economics.roiPct >= 80) reasons.push(`Projected ${Math.round(economics.roiPct)}% ROI`);
+
+  let gradePenalty = 0;
+  if (dna.gradeFloor && GRADE_RANK[lot.grade] < GRADE_RANK[dna.gradeFloor]) {
+    gradePenalty = 15;
+    reasons.push(`Grade ${lot.grade} is below your ${dna.gradeFloor} floor`);
+  }
+
+  const budgetFit = dna.budget ? lot.wholesalePrice <= dna.budget : true;
+  let budgetPenalty = 0;
+  if (dna.budget && !budgetFit) {
+    budgetPenalty = 12;
+    reasons.push(`Over budget by £${lot.wholesalePrice - dna.budget}`);
+  } else if (dna.budget) {
+    reasons.push(`£${lot.wholesalePrice} fits your budget`);
+  }
+
+  const fitScore = clamp(categoryPoints + brandPoints + keywordPoints, 0, 85);
+  const score = clamp(Math.round(fitScore + marginScore - gradePenalty - budgetPenalty), 0, 100);
+
+  return {
+    lot,
+    score,
+    fitScore: Math.round((fitScore / 85) * 100),
+    marginScore: Math.round((marginScore / 15) * 100),
+    budgetFit,
+    reasons: reasons.slice(0, 4),
+    economics
+  };
 }
 
 function scoreLot(lot: WholesaleLot, dna: StoreDNA): LotScore {

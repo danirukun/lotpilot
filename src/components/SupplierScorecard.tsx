@@ -58,7 +58,7 @@ export function SupplierScorecardDetails({ card }: { card: Scorecard }) {
       <div className="mt-2 rounded-xl border border-ink-line bg-ink/40 p-3">
         <div className="flex items-center justify-between text-[11px] text-paper/50">
           <span>
-            {card.tier} · {card.yearsOnFleek} yrs on Fleek · ★ {card.rating.toFixed(1)}
+            {card.tier} · {card.yearsOnFleek} yrs trading · ★ {card.rating.toFixed(1)}
           </span>
           <span>{card.ordersTracked} orders tracked</span>
         </div>

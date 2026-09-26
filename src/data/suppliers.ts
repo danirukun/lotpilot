@@ -187,6 +187,54 @@ export const SUPPLIERS: Supplier[] = [
       { minLots: 3, discountPct: 5 }
     ],
     shippingPerLot: 16
+  },
+  {
+    name: "Digbeth Devices (Birmingham)",
+    city: "Birmingham",
+    tier: "Preferred",
+    rating: 4.5,
+    onTimeRate: 0.94,
+    gradeAccuracy: 0.93,
+    disputeRate: 0.025,
+    leadTimeDays: 2,
+    yearsOnFleek: 5,
+    negotiationFlex: 0.09,
+    earlyPaymentDiscountPct: 2,
+    volumeTiers: [
+      { minLots: 2, discountPct: 4 },
+      { minLots: 3, discountPct: 6 }
+    ],
+    shippingPerLot: 14
+  },
+  {
+    name: "Circuit Surplus (Birmingham)",
+    city: "Birmingham",
+    tier: "Approved",
+    rating: 4.2,
+    onTimeRate: 0.89,
+    gradeAccuracy: 0.87,
+    disputeRate: 0.045,
+    leadTimeDays: 3,
+    yearsOnFleek: 3,
+    negotiationFlex: 0.12,
+    earlyPaymentDiscountPct: 2.5,
+    volumeTiers: [{ minLots: 2, discountPct: 5 }],
+    shippingPerLot: 16
+  },
+  {
+    name: "TechCycle Wholesale (London)",
+    city: "London",
+    tier: "Strategic",
+    rating: 4.7,
+    onTimeRate: 0.96,
+    gradeAccuracy: 0.95,
+    disputeRate: 0.018,
+    leadTimeDays: 2,
+    yearsOnFleek: 6,
+    negotiationFlex: 0.07,
+    earlyPaymentDiscountPct: 2,
+    volumeTiers: [{ minLots: 2, discountPct: 3 }],
+    shippingPerLot: 18
   }
 ];
 

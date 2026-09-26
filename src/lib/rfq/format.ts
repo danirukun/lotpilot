@@ -9,7 +9,7 @@ const AESTHETIC: Record<string, string> = {
   custom: "customised"
 };
 
-const CATEGORY_NOUN: Record<Category, string> = {
+const CATEGORY_NOUN: Partial<Record<Category, string>> = {
   denim: "denim",
   outerwear: "outerwear",
   knitwear: "knitwear",
@@ -17,11 +17,18 @@ const CATEGORY_NOUN: Record<Category, string> = {
   dresses: "dresses",
   sportswear: "sportswear",
   accessories: "accessories",
-  footwear: "footwear"
+  footwear: "footwear",
+  smartphones: "smartphones",
+  laptops: "laptops",
+  headphones: "headphones",
+  "cables-accessories": "cables & accessories",
+  tablets: "tablets",
+  gaming: "gaming",
+  "refurb-mixed": "refurb tech"
 };
 
 export const aestheticLabel = (a: string) => AESTHETIC[a] ?? a;
-export const categoryLabel = (c: Category) => CATEGORY_NOUN[c] ?? c;
+export const categoryLabel = (c: Category) => CATEGORY_NOUN[c] ?? String(c).replace(/-/g, " ");
 export const gradeLabel = (letters: RfqGradeLetter[]) => letters.join("/");
 
 export function pieceRangeLabel({ min, max }: Rfq["pieceRange"]): string {
