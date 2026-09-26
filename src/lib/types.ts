@@ -24,7 +24,8 @@ export type ElectronicsCategory =
   | "gaming"
   | "refurb-mixed";
 
-export type Category = FashionCategory | ElectronicsCategory;
+export type TimepieceCategory = "watches" | "clocks";
+export type Category = FashionCategory | ElectronicsCategory | TimepieceCategory;
 
 export type LotCatalog = "fashion" | "electronics";
 

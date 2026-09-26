@@ -21,7 +21,7 @@ const VERTICAL_KEYWORDS: Record<Exclude<Vertical, "general">, string[]> = {
   footwear: ["shoe", "shoes", "sneaker", "trainer", "boots", "footwear", "sandals"],
   accessories: ["jewellery", "jewelry", "watch", "watches", "handbag", "bags", "sunglasses", "scarf", "accessories"],
   electronics: ["electronics", "phone", "smartphone", "laptop", "headphones", "earbuds", "charger", "tablet", "camera", "gaming pc", "console", "tech", "gadget", "refurbished", "usb"],
-  home: ["furniture", "homeware", "home decor", "kitchen", "lighting", "sofa", "rug", "candle", "interiors"],
+  home: ["clock", "furniture", "homeware", "home decor", "kitchen", "lighting", "sofa", "rug", "candle", "interiors"],
   beauty: ["beauty", "skincare", "cosmetics", "makeup", "fragrance", "haircare", "salon"],
   "books-media": ["books", "bookshop", "vinyl", "records", "comics", "magazines"],
   "toys-games": ["toys", "board games", "lego", "puzzles", "kids toys"],

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { getSupabase } from "../src/lib/supabase/client";
 import { buildWholesaleQuery, researchWholesale } from "../src/lib/wholesale/research";
 import { searchWholesaleRag } from "../src/lib/wholesale/search";
+import { runAgent } from "../src/lib/agent";
 import { parseBrief } from "../src/lib/parseBrief";
 async function main() {
   const db = getSupabase(); assert.ok(db);
@@ -27,6 +28,19 @@ async function main() {
       assert.ok(Math.abs(expected - hit.rrf_score) < 1e-12, "Actual RRF formula must agree with returned ranks");
     }
     console.log(JSON.stringify({ brief, hits: result.hits.map(h => ({name:h.name,fts:h.rank_fts,fuzzy:h.rank_trgm,rrf:h.rrf_score})) }));
+  }
+  for (const product of ["watches", "clocks"]) {
+    const result = await runAgent(`I sell ${product}, budget 4000 GBP`, undefined, { refresh: true });
+    assert.equal(result.wholesale?.mode, "rag");
+    assert.ok(result.wholesale.leads.length > 0);
+    assert.equal(result.rfq.budget, 4000);
+    for (const lead of result.wholesale.leads) {
+      assert.equal(lead.category.toLowerCase(), product);
+      assert.ok(lead.sourceUrl?.includes("thewholesaler.co.uk/suppliers/"));
+      assert.ok(lead.evidence?.keywordRank);
+    }
+    assert.deepEqual(result.matches, []);
+    console.log(JSON.stringify({ product, leads: result.wholesale.leads.map(lead => lead.name) }));
   }
   const miss = await searchWholesaleRag("zxqv918273nonexistent", 6, "clothing");
   assert.ok(miss); assert.equal(miss.hits.length, 0);

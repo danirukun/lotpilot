@@ -9,11 +9,16 @@ import { createClient } from "@supabase/supabase-js";
 import { parse } from "node-html-parser";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { parseDirectoryEvidence } from "./directory-evidence.mjs";
 
 const SOURCES = [
   "https://tobewornagain.com/pages/about",
   "https://www.londonvintagewholesale.com/",
   "https://vintagewholesalesupplyltd.com/pages/aboutus"
+];
+const DIRECTORIES = [
+  { url: "https://www.thewholesaler.co.uk/suppliers/jewellery/watches/", category: "Watches", vertical: "accessories", evidencePattern: /\b(?:watches|watch|wristwatches)\b/i },
+  { url: "https://www.thewholesaler.co.uk/suppliers/home_and_garden/clocks/", category: "Clocks", vertical: "home", evidencePattern: /\bclocks?\b/i }
 ];
 const clean = text => (text || "").replace(/\s+/g, " ").trim();
 
@@ -41,6 +46,13 @@ async function main() {
   const rows = [];
   // Fail the run instead of treating a partial/blocked crawl as current inventory.
   for (const url of [...new Set([...SOURCES, ...extra])]) rows.push(await readSource(url));
+  for (const directory of DIRECTORIES) {
+    const response = await fetch(directory.url, { signal: AbortSignal.timeout(20000) });
+    if (!response.ok) throw new Error(`${directory.url}: HTTP ${response.status}`);
+    const evidence = parseDirectoryEvidence(await response.text(), directory.url, directory);
+    if (!evidence.length) throw new Error(`${directory.url}: no supplier descriptions found`);
+    rows.push(...evidence);
+  }
   if (output) { await mkdir(path.dirname(output), { recursive: true }); await writeFile(output, JSON.stringify(rows, null, 2)); }
   if (!dryRun) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

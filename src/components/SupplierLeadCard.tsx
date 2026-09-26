@@ -26,6 +26,7 @@ export function SupplierLeadCard({ lead, rank, layout = "grid" }: {
         <details className="mt-2 text-xs text-paper/60">
           <summary className="cursor-pointer text-brand-300">Source excerpt &amp; retrieval</summary>
           <p className="mt-2 leading-relaxed">{lead.snippet}</p>
+          {lead.sourceUrl && <a className="mt-2 inline-block text-brand-300 hover:underline" href={lead.sourceUrl} target="_blank" rel="noopener noreferrer">Read original source ↗</a>}
           <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-ink-line p-3">
             <dt>Full-text rank</dt><dd>{lead.evidence?.keywordRank ?? "No match"}</dd>
             <dt>Fuzzy rank</dt><dd>{lead.evidence?.fuzzyRank ?? "No match"}</dd>
@@ -42,7 +43,7 @@ export function SupplierLeadCard({ lead, rank, layout = "grid" }: {
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 sm:col-span-2">
         <span className="text-[11px] text-paper/50">Stock and grades need confirmation</span>
-        <a href={lead.sourceUrl ?? lead.url} target="_blank" rel="noopener noreferrer" className="btn-primary shrink-0 px-3 py-2 text-xs">View supplier ↗</a>
+        <a href={lead.url} target="_blank" rel="noopener noreferrer" className="btn-primary shrink-0 px-3 py-2 text-xs">View supplier ↗</a>
       </div>
     </div>
   </article>;

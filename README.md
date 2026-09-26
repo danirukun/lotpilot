@@ -58,3 +58,5 @@ npm run verify:rag
 Production: https://lotpilot-ten.vercel.app. Deploy the Next.js project with Supabase public configuration. The source index migration must be applied before deploying this version; an unavailable RPC fails closed without fixtures. A future semantic retrieval implementation must use real model-versioned embeddings for both documents and queries and reindex the corpus.
 
 Blocked storefronts can fall back to live public HTML from Jina Reader (which may cache pages). The profile identifies this source method. Challenge pages are rejected and failed reads are not cached. Supplier retrieval still uses the real source-document RRF pipeline.
+
+The evidence importer also reads individual supplier descriptions from The Wholesaler’s Watches and Clocks directories, with original source links and fetch timestamps. Watches and clocks remain separate product categories; directory coverage is bounded to the configured sources, not the whole directory.

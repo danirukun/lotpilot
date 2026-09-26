@@ -1,4 +1,4 @@
-import type { Category, FashionCategory, Grade, StoreDNA } from "@/lib/types";
+import type { Category, FashionCategory, TimepieceCategory, Grade, StoreDNA } from "@/lib/types";
 
 export const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   y2k: ["y2k", "2000s", "noughties", "mcbling", "low rise", "low-rise", "baby tee"],
@@ -27,7 +27,9 @@ export const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   ]
 };
 
-export const CATEGORY_KEYWORDS: Record<FashionCategory, string[]> = {
+export const CATEGORY_KEYWORDS: Record<FashionCategory | TimepieceCategory, string[]> = {
+  watches: ["watch", "wristwatch", "wrist watch", "pocket watch", "fob watch"],
+  clocks: ["clock"],
   denim: ["denim", "jeans", "levi", "501", "skirt", "cargo"],
   outerwear: ["jacket", "coat", "outerwear", "flannel", "shell", "puffer", "chore", "overshirt"],
   knitwear: ["knit", "jumper", "sweater", "cardigan", "cashmere", "hoodie", "hoody"],
@@ -67,7 +69,7 @@ export function parseBrief(brief: string): StoreDNA {
     .filter(([, kws]) => kws.some((kw) => text.includes(kw)))
     .map(([key]) => key);
 
-  const categories = (Object.keys(CATEGORY_KEYWORDS) as FashionCategory[]).filter((cat) =>
+  const categories = (Object.keys(CATEGORY_KEYWORDS) as (FashionCategory | TimepieceCategory)[]).filter((cat) =>
     CATEGORY_KEYWORDS[cat].some((kw) => text.includes(kw))
   );
 
