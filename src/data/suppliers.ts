@@ -169,6 +169,24 @@ export const SUPPLIERS: Supplier[] = [
     earlyPaymentDiscountPct: 1.5,
     volumeTiers: [{ minLots: 2, discountPct: 3 }],
     shippingPerLot: 12
+  },
+  {
+    name: "Terrace Archive (Manchester)",
+    city: "Manchester",
+    tier: "Preferred",
+    rating: 4.6,
+    onTimeRate: 0.93,
+    gradeAccuracy: 0.94,
+    disputeRate: 0.02,
+    leadTimeDays: 3,
+    yearsOnFleek: 4,
+    negotiationFlex: 0.09,
+    earlyPaymentDiscountPct: 2,
+    volumeTiers: [
+      { minLots: 2, discountPct: 3 },
+      { minLots: 3, discountPct: 5 }
+    ],
+    shippingPerLot: 16
   }
 ];
 

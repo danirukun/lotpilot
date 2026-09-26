@@ -37,5 +37,16 @@ export const BENCHMARKS: Record<string, MarketBenchmark> = {
   "lot-029": { marketPricePerPiece: 13, comparables: 17 },
   "lot-030": { marketPricePerPiece: 40, comparables: 14 },
   "lot-031": { marketPricePerPiece: 13, comparables: 26 },
-  "lot-032": { marketPricePerPiece: 30, comparables: 12 }
+  "lot-032": { marketPricePerPiece: 30, comparables: 12 },
+  "lot-033": { marketPricePerPiece: 30, comparables: 24 },
+  "lot-034": { marketPricePerPiece: 20.5, comparables: 18 },
+  "lot-035": { marketPricePerPiece: 5.2, comparables: 15 },
+  "lot-036": { marketPricePerPiece: 17, comparables: 21 },
+  "lot-037": { marketPricePerPiece: 36, comparables: 11 },
+  "lot-038": { marketPricePerPiece: 22, comparables: 14 },
+  "lot-039": { marketPricePerPiece: 20, comparables: 27 },
+  "lot-040": { marketPricePerPiece: 20.5, comparables: 13 },
+  "lot-041": { marketPricePerPiece: 10, comparables: 22 },
+  "lot-042": { marketPricePerPiece: 13.5, comparables: 31 },
+  "lot-043": { marketPricePerPiece: 10.5, comparables: 19 }
 };

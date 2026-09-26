@@ -1,10 +1,10 @@
 import type { Category, Grade, StoreDNA } from "@/lib/types";
 
-const AESTHETIC_KEYWORDS: Record<string, string[]> = {
+export const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   y2k: ["y2k", "2000s", "noughties", "mcbling", "low rise", "low-rise", "baby tee"],
   vintage: ["vintage", "retro", "true vintage", "preloved", "pre-loved"],
   streetwear: ["streetwear", "street wear", "hype", "skate", "hip hop", "hip-hop"],
-  grunge: ["grunge", "90s rock", "flannel", "band tee", "alternative", "punk"],
+  grunge: ["grunge", "90s rock", "flannel", "band tee", "alternative", "punk", "rock graphic", "band graphic"],
   workwear: ["workwear", "work wear", "carhartt", "dickies", "chore", "utility"],
   preppy: ["preppy", "prep", "ivy", "collegiate", "ralph", "polo"],
   cottagecore: ["cottagecore", "prairie", "cottage", "ditsy", "floral tea"],
@@ -15,26 +15,38 @@ const AESTHETIC_KEYWORDS: Record<string, string[]> = {
   gorpcore: ["gorpcore", "techwear", "outdoor", "gore-tex", "goretex", "north face"],
   girly: ["girly", "coquette", "cute", "pink"],
   americana: ["americana", "usa", "american vintage", "college"],
-  office: ["office", "workwear smart", "tailored", "business"]
+  office: ["office", "workwear smart", "tailored", "business"],
+  football: [
+    "football", "soccer", "retro jersey", "terrace", "matchworn", "match-worn",
+    " kit ", " kits ", " kits,", " kits.", "bench coat", "drill top"
+  ],
+  custom: [
+    "customis", "customiz", "custom denim", "custom jacket", "reworked", "upcycled",
+    "hand-painted", "hand painted", "hand-printed", "iron-on", "one-off"
+  ]
 };
 
-const CATEGORY_KEYWORDS: Record<Category, string[]> = {
+export const CATEGORY_KEYWORDS: Record<Category, string[]> = {
   denim: ["denim", "jeans", "levi", "501", "skirt", "cargo"],
   outerwear: ["jacket", "coat", "outerwear", "flannel", "shell", "puffer", "chore", "overshirt"],
   knitwear: ["knit", "jumper", "sweater", "cardigan", "cashmere", "hoodie", "hoody"],
   "tees-tops": ["tee", "t-shirt", "tshirt", "top", "shirt", "blouse", "baby tee"],
   dresses: ["dress", "dresses", "slip", "maxi", "midi", "kaftan"],
-  sportswear: ["sportswear", "jersey", "trackie", "tracksuit", "athleisure", "sports"],
-  accessories: ["accessor", "scarf", "belt", "bag", "sunglasses", "tie"],
+  sportswear: [
+    "sportswear", "jersey", "trackie", "tracksuit", "athleisure", "sports",
+    "football kit", " kits ", " kits,", "training top", "drill top", "track top"
+  ],
+  accessories: ["accessor", "scarf", "scarves", "belt", "bag", "sunglasses", "tie", " caps", " cap "],
   footwear: ["footwear", "shoe", "sneaker", "trainer", "boot", "docs", "doc marten"]
 };
 
-const BRAND_DICTIONARY = [
+export const BRAND_DICTIONARY = [
   "Levi's", "Wrangler", "Lee", "Carhartt", "Dickies", "Nike", "adidas", "Reebok",
   "Ralph Lauren", "Tommy Hilfiger", "Nautica", "Diesel", "G-Star", "Replay",
   "Champion", "Starter", "The North Face", "Berghaus", "Salomon", "Dr. Martens",
   "Timberland", "Pringle", "John Smedley", "Laura Ashley", "Jaeger", "Aquascutum",
-  "Umbro", "Ellesse", "Helly Hansen", "Kappa", "Fila", "Stussy"
+  "Umbro", "Ellesse", "Helly Hansen", "Kappa", "Fila", "Stussy",
+  "Adidas Originals", "Admiral", "Hummel", "Le Coq Sportif", "Puma", "Diadora"
 ];
 
 const GRADE_MAP: Record<string, Grade> = {

@@ -22,7 +22,9 @@ const AESTHETIC_LABEL: Record<string, string> = {
   office: "smart / office",
   athleisure: "athleisure",
   festival: "festival",
-  surf: "surf"
+  surf: "surf",
+  football: "football / retro kits",
+  custom: "customised / reworked"
 };
 
 /** Rank the seeded catalog against parsed store DNA. Fully deterministic. */
