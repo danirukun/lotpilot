@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LotCard } from "@/components/LotCard";
 import { DealModal, type DealItem } from "@/components/DealModal";
+import { MatchesPanel } from "@/components/MatchesPanel";
 import { PolicyPanel } from "@/components/PolicyPanel";
 import { RfqSummaryCard } from "@/components/RfqSummaryCard";
 import { SourcingPlanCard } from "@/components/SourcingPlanCard";
@@ -322,18 +322,12 @@ function AgentMessage({
       <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
       {result.matches.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {result.matches.map((m, idx) => (
-            <LotCard
-              key={m.lot.id}
-              match={m}
-              rank={idx}
-              onBuy={onBuy}
-              onNegotiate={onNegotiate}
-              disabled={disabled}
-            />
-          ))}
-        </div>
+        <MatchesPanel
+          matches={result.matches}
+          onBuy={onBuy}
+          onNegotiate={onNegotiate}
+          disabled={disabled}
+        />
       )}
     </div>
   );
