@@ -1,6 +1,8 @@
 import type { ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
 import type { StoreProfile } from "@/lib/store/types";
 import type { StoreDNA } from "@/lib/types";
+import { rfqSummaryLine } from "@/lib/rfq/format";
+import type { Rfq } from "@/lib/rfq/types";
 
 interface LlmConfig {
   provider: "openai" | "anthropic";
@@ -43,7 +45,8 @@ export async function generateLlmSummary(
   dna: StoreDNA,
   matches: ProcuredLot[],
   plan: SourcingPlan,
-  store?: StoreProfile
+  store?: StoreProfile,
+  rfq?: Rfq
 ): Promise<string | null> {
   const config = resolveConfig();
   if (!config) return null;
@@ -57,10 +60,14 @@ export async function generateLlmSummary(
     landedRoiPct: m.metrics.landedRoiPct,
     priceVsMarket: m.metrics.priceIndex,
     supplierScore: m.supplier.score,
+    keySupplier: Boolean(m.supplier.keySupplier),
+    rfqMatch: m.rfq?.score,
+    rfqMisses: m.rfq?.checks.filter((c) => c.status !== "met").map((c) => `${c.label}: ${c.detail}`),
     decisionScore: m.metrics.decisionScore,
     policyStatus: m.policy.status,
     reasons: m.reasons
   }));
+  const rfqContext = rfq && { summary: rfqSummaryLine(rfq), source: rfq.source };
   const planContext = {
     lines: plan.lines.map((l) => ({ title: l.title, list: l.listPrice, negotiated: l.estimatedPrice })),
     totalSpend: plan.totalSpend,
@@ -85,10 +92,11 @@ export async function generateLlmSummary(
     "You are LotPilot, an expert wholesale buying agent for UK indie secondhand fashion retailers. " +
     "Given a store brief and a pre-ranked list of wholesale lots, write a confident, concise buyer's briefing (3-4 sentences). " +
     "Reference the top pick, the recommended sourcing plan (spend, negotiated savings, landed profit) and one policy exclusion if present. Do not invent lots or numbers beyond what is provided. British English, no markdown headers. " +
-    "If a store profile is given, it was read from the store's website; a short store read-out is already shown before your text, so do not repeat it. If fashionFit is false, say plainly that the matches are weak.";
+    "If a store profile is given, it was read from the store's website; a short store read-out is already shown before your text, so do not repeat it. If fashionFit is false, say plainly that the matches are weak. " +
+    "If an RFQ is given, say how well the top pick meets it (rfqMatch percent) and mention a key supplier the retailer has bought from before.";
 
   const user = JSON.stringify(
-    { brief: dna.brief, dna, store: storeContext, rankedLots: context, sourcingPlan: planContext },
+    { brief: dna.brief, dna, rfq: rfqContext, store: storeContext, rankedLots: context, sourcingPlan: planContext },
     null,
     2
   );

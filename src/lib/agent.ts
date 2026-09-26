@@ -1,10 +1,13 @@
-import { rankLots } from "@/lib/matcher";
 import { parseBrief } from "@/lib/parseBrief";
 import { buildSummary } from "@/lib/summary";
 import { generateLlmSummary, llmAvailable, llmModelName } from "@/lib/llm";
 import { gbp } from "@/lib/format";
 import { sanitizePolicy } from "@/lib/procurement/policy";
-import { buildSourcingPlan, procureLot, rankProcured } from "@/lib/procurement/procure";
+import { buildSourcingPlan, rankProcured } from "@/lib/procurement/procure";
+import { resolvePersonaId } from "@/lib/procurement/keySuppliers";
+import { llmParseRfq } from "@/lib/rfq/llm";
+import { selectCandidates } from "@/lib/rfq/rank";
+import { resolveRfq } from "@/lib/rfq/resolve";
 import { extractStoreProfile } from "@/lib/store/extract";
 import type { StoreProfile } from "@/lib/store/types";
 import type { AgentResult, StoreDNA } from "@/lib/types";
@@ -16,8 +19,15 @@ export const DEFAULT_BUDGET = 2000;
  * Ranking, policy checks, negotiation and the sourcing plan are always
  * deterministic. If an LLM key is present the model writes the narrative.
  */
-export async function runAgent(brief: string, policyInput?: unknown): Promise<AgentResult> {
-  return runAgentFromDna(parseBrief(brief), policyInput);
+export async function runAgent(
+  brief: string,
+  policyInput?: unknown,
+  opts: { rfq?: unknown; personaId?: unknown } = {}
+): Promise<AgentResult> {
+  return runAgentFromDna(parseBrief(brief), policyInput, undefined, {
+    rfq: opts.rfq,
+    personaId: resolvePersonaId(brief, opts.personaId)
+  });
 }
 
 /** Read a store URL, then buy for the extracted DNA with the size-based budget. */
@@ -29,26 +39,43 @@ export async function runAgentForStore(storeUrl: string, policyInput?: unknown):
 export async function runAgentFromDna(
   dna: StoreDNA,
   policyInput?: unknown,
-  store?: StoreProfile
+  store?: StoreProfile,
+  opts: { rfq?: unknown; personaId?: string } = {}
 ): Promise<AgentResult> {
   const policy = sanitizePolicy(policyInput);
-  const budget = dna.budget ?? DEFAULT_BUDGET;
+  const rfq = await resolveRfq(dna, {
+    override: opts.rfq,
+    llmParse: llmAvailable() && !store ? llmParseRfq : undefined
+  });
+  const budget = rfq.budget ?? dna.budget ?? DEFAULT_BUDGET;
 
-  const candidates = rankLots(dna, 12).map((m) => procureLot(m, policy, budget));
-  const plan = buildSourcingPlan(candidates, policy, budget, dna.budget === undefined);
+  const candidates = selectCandidates(dna, rfq, policy, budget, opts.personaId);
+  const plan = buildSourcingPlan(candidates, policy, budget, rfq.budget === undefined && dna.budget === undefined);
   const matches = rankProcured(candidates).slice(0, 6);
 
-  const base = { dna, matches, plan, policy, ...(store ? { store } : {}) };
+  const base = {
+    dna,
+    rfq,
+    matches,
+    plan,
+    policy,
+    ...(opts.personaId ? { personaId: opts.personaId } : {}),
+    ...(store ? { store } : {})
+  };
   const preface = store ? storePreface(store) : "";
 
   if (llmAvailable()) {
-    const llmSummary = await generateLlmSummary(dna, matches, plan, store);
+    const llmSummary = await generateLlmSummary(dna, matches, plan, store, rfq);
     if (llmSummary) {
       return { ...base, summary: joinSummary(preface, llmSummary), source: "llm", llmModel: llmModelName() };
     }
   }
 
-  return { ...base, summary: joinSummary(preface, buildSummary(dna, matches, plan)), source: "deterministic" };
+  return {
+    ...base,
+    summary: joinSummary(preface, buildSummary(dna, matches, plan, rfq)),
+    source: "deterministic"
+  };
 }
 
 function storePreface(store: StoreProfile): string {

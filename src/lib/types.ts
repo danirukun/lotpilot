@@ -1,5 +1,6 @@
 import type { BuyingPolicy, ProcuredLot, SourcingPlan } from "@/lib/procurement/types";
 import type { StoreProfile } from "@/lib/store/types";
+import type { Rfq } from "@/lib/rfq/types";
 
 export type Grade = "A" | "B" | "AB" | "Mixed";
 
@@ -78,6 +79,9 @@ export interface AgentResult {
   llmModel?: string;
   /** Present when the run started from a store URL. */
   store?: StoreProfile;
+  rfq: Rfq;
+  /** Store persona detected from the brief, used for purchase history. */
+  personaId?: string;
 }
 
 export interface OrderLine {

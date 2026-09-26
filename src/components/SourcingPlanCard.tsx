@@ -1,5 +1,6 @@
 "use client";
 
+import { KeySupplierLabel } from "@/components/SupplierScorecard";
 import { gbp, pct } from "@/lib/format";
 import type { SourcingPlan } from "@/lib/procurement/types";
 
@@ -83,7 +84,14 @@ export function SourcingPlanCard({
                 <tr key={l.lotId} className="border-t border-ink-line/70">
                   <td className="py-1.5 pr-2">
                     <span className="block text-paper/90">{l.title}</span>
-                    <span className="text-paper/45">{l.wholesaler}</span>
+                    <span className="inline-flex flex-wrap items-center gap-1.5 text-paper/45">
+                      {l.wholesaler}
+                      {l.supplierScore !== undefined && (
+                        <span className="text-paper/55">· {l.supplierScore}/100</span>
+                      )}
+                      {l.rfqScore !== undefined && <span className="text-paper/55">· RFQ {l.rfqScore}%</span>}
+                      {l.keySupplier && <KeySupplierLabel />}
+                    </span>
                   </td>
                   <td className="py-1.5 text-right text-paper/50 line-through">{gbp(l.listPrice)}</td>
                   <td className="py-1.5 text-right font-semibold text-paper">

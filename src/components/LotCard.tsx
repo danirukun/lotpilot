@@ -1,6 +1,8 @@
 "use client";
 
+import { RfqChecks, rfqChipClass } from "@/components/RfqChecks";
 import { ScoreBar } from "@/components/ScoreBar";
+import { SupplierScorecardDetails } from "@/components/SupplierScorecard";
 import { gbp, pct } from "@/lib/format";
 import type { PolicyStatus, ProcuredLot, RuleStatus } from "@/lib/procurement/types";
 
@@ -70,9 +72,14 @@ export function LotCard({
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex flex-wrap items-center gap-1.5">
+          {match.rfq && (
+            <span className={`chip font-semibold ${rfqChipClass(match.rfq.score)}`}>
+              RFQ match {match.rfq.score}%
+            </span>
+          )}
           <span className="chip">Grade {lot.grade}</span>
           <span className="chip">{lot.pieceCount} pcs</span>
-          {lot.aesthetics.slice(0, 2).map((a) => (
+          {lot.aesthetics.slice(0, match.rfq ? 1 : 2).map((a) => (
             <span key={a} className="chip capitalize">
               {a}
             </span>
@@ -80,9 +87,7 @@ export function LotCard({
         </div>
 
         <h3 className="mt-3 font-semibold leading-tight">{lot.title}</h3>
-        <p className="text-xs text-paper/55">
-          {supplier.name} · {supplier.tier} supplier
-        </p>
+        <SupplierScorecardDetails card={supplier} />
 
         <ul className="mt-3 space-y-1 text-xs text-paper/70">
           {match.reasons.slice(0, 3).map((r) => (
@@ -138,6 +143,8 @@ export function LotCard({
             ))}
           </ul>
         </details>
+
+        {match.rfq && match.rfq.checks.length > 0 && <RfqChecks rfq={match.rfq} />}
 
         <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
           <button

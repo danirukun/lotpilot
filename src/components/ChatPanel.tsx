@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { LotCard } from "@/components/LotCard";
 import { DealModal, type DealItem } from "@/components/DealModal";
 import { PolicyPanel } from "@/components/PolicyPanel";
+import { RfqSummaryCard } from "@/components/RfqSummaryCard";
 import { SourcingPlanCard } from "@/components/SourcingPlanCard";
 import { StoreProfileCard } from "@/components/StoreProfileCard";
 import { PERSONAS } from "@/data/personas";
@@ -13,6 +14,8 @@ import { track } from "@/lib/analytics";
 import { DEFAULT_POLICY } from "@/lib/procurement/policy";
 import type { BuyingPolicy, ProcuredLot } from "@/lib/procurement/types";
 import type { AgentResult } from "@/lib/types";
+import { rfqSummaryLine } from "@/lib/rfq/format";
+import { applyRfqPatch, type RfqPatch } from "@/lib/rfq/resolve";
 
 interface ActiveDeal {
   items: DealItem[];
@@ -42,7 +45,7 @@ interface AgentTurn {
 }
 type Turn = UserTurn | AgentTurn;
 
-type AgentRequest = { brief: string } | { storeUrl: string };
+type AgentRequest = ({ brief: string } | { storeUrl: string }) & { rfq?: RfqPatch };
 
 const SUGGESTIONS = [
   "I run a Y2K thrift shop in Shoreditch, £2000 budget.",
@@ -108,6 +111,14 @@ export function ChatPanel() {
 
   const started = turns.length > 0 || loading;
 
+  const editRfq = (result: AgentResult, patch: RfqPatch) => {
+    track("rfq_edited", { fields: Object.keys(patch).length });
+    return run(
+      { brief: result.dna.brief, rfq: patch },
+      `Edited RFQ: ${rfqSummaryLine(applyRfqPatch(result.rfq, patch, "edited"))}`
+    );
+  };
+
   const openDeal = (result: AgentResult, lotIds: string[], negotiate: boolean) =>
     setDeal({ items: lotIds.map(toItem), negotiate, policy: result.policy, budget: result.plan.budget });
 
@@ -167,7 +178,7 @@ export function ChatPanel() {
             if (!lastRequest) return;
             track("policy_applied", { ...policy });
             if ("storeUrl" in lastRequest) analyseStore(lastRequest.storeUrl);
-            else submit(lastRequest.brief);
+            else run(lastRequest, lastRequest.brief);
           }}
         />
       </aside>
@@ -197,6 +208,7 @@ export function ChatPanel() {
                   )
                 }
                 onNegotiate={(m) => openDeal(turn.result, [m.lot.id], true)}
+                onEditRfq={turn.result.store ? undefined : (patch) => editRfq(turn.result, patch)}
                 onBuyPlan={() =>
                   openDeal(
                     turn.result,
@@ -266,12 +278,14 @@ function AgentMessage({
   onBuy,
   onNegotiate,
   onBuyPlan,
+  onEditRfq,
   disabled
 }: {
   result: AgentResult;
   onBuy: (m: ProcuredLot) => void;
   onNegotiate: (m: ProcuredLot) => void;
   onBuyPlan: () => void;
+  onEditRfq?: (patch: RfqPatch) => void;
   disabled?: boolean;
 }) {
   return (
@@ -290,6 +304,8 @@ function AgentMessage({
       </div>
 
       {result.store && <StoreProfileCard store={result.store} />}
+
+      {result.rfq && <RfqSummaryCard rfq={result.rfq} onEdit={onEditRfq} disabled={disabled} />}
 
       <SourcingPlanCard plan={result.plan} onBuyPlan={onBuyPlan} disabled={disabled} />
 
