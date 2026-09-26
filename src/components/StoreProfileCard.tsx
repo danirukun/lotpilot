@@ -171,11 +171,18 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
                 <span className="text-sm font-semibold text-paper">{maps.name}</span>
                 <span className="chip shrink-0 px-2 py-0.5 text-[10px]">{MAPS_SOURCE_LABEL[maps.source]}</span>
               </div>
-              {maps.rating !== undefined && (
+              {(maps.rating !== undefined || maps.reviewCount !== undefined) && (
                 <div className="mt-1 text-xs text-paper/80">
-                  <span className="text-accent-400">★</span> {maps.rating.toFixed(1)}
+                  {maps.rating !== undefined && (
+                    <>
+                      <span className="text-accent-400">★</span> {maps.rating.toFixed(1)}
+                    </>
+                  )}
                   {maps.reviewCount !== undefined && (
-                    <span className="text-paper/50"> · {maps.reviewCount.toLocaleString("en-GB")} reviews</span>
+                    <span className="text-paper/50">
+                      {maps.rating !== undefined ? " · " : ""}
+                      {maps.reviewCount.toLocaleString("en-GB")} reviews
+                    </span>
                   )}
                 </div>
               )}

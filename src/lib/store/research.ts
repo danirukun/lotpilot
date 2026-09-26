@@ -125,6 +125,10 @@ const ADDRESS = new RegExp(
   String.raw`\b(\d{1,4}(?:\s*-\s*\d{1,4})?[A-Za-z]?,?\s+(?:[A-Z][\w'’.]*\s+){0,4}(?:Street|St|Road|Rd|Lane|Ln|Avenue|Ave|Way|Place|Pl|Square|Sq|Row|Yard|Parade|Walk|Hill|Gate|Terrace|Close|Market|Arcade|Drive|Court|Broadway|[A-Z][\w'’]+)\.?(?:,\s*[A-Z][\w'’]+(?:\s+[A-Z][\w'’]+){0,2})?,?\s+${POSTCODE})(?:,\s*([A-Z][a-z]+(?:\s[A-Z][a-z]+)?))?`
 );
 
+const STREET_ADDRESS = new RegExp(
+  String.raw`\b\d{1,4}(?:\s*-\s*\d{1,4})?[A-Za-z]?\s+(?:[A-Z][\w'’.]*\s+){0,3}(?:Street|St|Road|Rd|Lane|Ln|Avenue|Ave|Way|Place|Pl|Square|Sq|Row|Yard|Parade|Walk|Hill|Terrace|Drive|Broadway)\b\.?(?:,\s*[A-Z][a-z]+(?:\s[A-Z][a-z]+)?){1,2}`
+);
+
 /** Pull a Maps-style listing (rating, reviews, address, categories) out of search snippets. */
 export function parseListing(
   name: string,
@@ -143,8 +147,10 @@ export function parseListing(
   let reviewCount: number | undefined;
   for (const t of texts) {
     const r = parseRating(t);
-    if (r.rating && rating === undefined) {
+    if (r.rating !== undefined && rating === undefined) {
       rating = r.rating;
+      reviewCount = r.reviewCount ?? reviewCount;
+    } else if (reviewCount === undefined) {
       reviewCount = r.reviewCount;
     }
     if (rating !== undefined && reviewCount !== undefined) break;
@@ -160,11 +166,18 @@ export function parseListing(
       break;
     }
   }
+  if (!address) {
+    const m = [...answers, ...texts].map((t) => t.match(STREET_ADDRESS)).find(Boolean);
+    if (m) {
+      address = m[0].replace(/\s+/g, " ").trim();
+      locality = localityOf(address);
+    }
+  }
 
   const all = texts.join(" \n ");
   const types = CATEGORY_TYPES.filter(([re]) => re.test(all)).map(([, t]) => t);
 
-  if (rating === undefined && !address) return null;
+  if (rating === undefined && reviewCount === undefined && !address) return null;
 
   const mapsUrl =
     results.find((r) => MAPS_HOST.test(r.url ?? ""))?.url ??
@@ -204,9 +217,12 @@ export function countLocations(texts: string[]): number {
   return codes.size;
 }
 
-/** Handles "4.7 (312 reviews)", "4.7 stars", "rated 4.7/5", "3.5 out of 5 57 reviews" and "312 reviews". */
+/** Handles "4.7 (312 reviews)", "4.7(312)", "4.7 stars", "rated 4.7/5", "3.5 out of 5 57 reviews" and "312 reviews". */
 export function parseRating(text: string): { rating?: number; reviewCount?: number } {
   const num = (s: string) => Number(s.replace(/,/g, ""));
+  const compact = text.match(/\b([1-5]\.\d)\s?\(([\d,]{1,7})\)/);
+  if (compact) return { rating: num(compact[1]), reviewCount: num(compact[2]) };
+
   const combined = text.match(
     /\b([1-5](?:\.\d)?)(?![\d.])\s*(★|stars?|\/\s*5|out of 5)?[\s,·(-]+(?:based on\s*)?([\d,]{1,7})\s*(?:google\s+)?(?:reviews?|ratings?)\b/i
   );
@@ -216,8 +232,9 @@ export function parseRating(text: string): { rating?: number; reviewCount?: numb
   }
 
   const rated = text.match(/\b(?:rated|rating(?: of)?:?)\s*([1-5](?:\.\d)?)\b|\b([1-5]\.\d)\s*(?:★|stars?|\/\s*5|out of 5)/i);
-  const rating = rated ? num(rated[1] ?? rated[2]) : undefined;
-  const count = text.match(/\b([\d,]{1,7})\s*(?:google\s+)?reviews\b/i);
-  const reviewCount = count && num(count[1]) > 0 ? num(count[1]) : undefined;
-  return { rating, reviewCount: rating !== undefined ? reviewCount : undefined };
+  const count = text.match(/(?:^|[^\d,])([\d,]{1,7})\s*(?:google\s+)?reviews\b/i);
+  return {
+    rating: rated ? num(rated[1] ?? rated[2]) : undefined,
+    reviewCount: count && num(count[1]) > 0 ? num(count[1]) : undefined
+  };
 }
