@@ -110,7 +110,7 @@ export interface StoreProfile {
   brief: string;
   signals: StoreSignal[];
   fetch: {
-    mode: "live" | "fixture" | "offline";
+    mode: "live" | "reader" | "fixture" | "offline";
     notes: string[];
     /** True when this profile was served from the storefront analysis cache. */
     cached?: boolean;

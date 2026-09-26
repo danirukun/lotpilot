@@ -56,3 +56,5 @@ npm run verify:rag
 `verify:rag` uses the public Supabase role to verify provenance, both lexical rank lists, the RRF formula, vertical filtering, empty searches and cache behavior. It requires network access and configured Supabase values. Regression tests use explicit mocks only inside tests.
 
 Production: https://lotpilot-ten.vercel.app. Deploy the Next.js project with Supabase public configuration. The source index migration must be applied before deploying this version; an unavailable RPC fails closed without fixtures. A future semantic retrieval implementation must use real model-versioned embeddings for both documents and queries and reindex the corpus.
+
+Blocked storefronts can fall back to live public HTML from Jina Reader (which may cache pages). The profile identifies this source method. Challenge pages are rejected and failed reads are not cached. Supplier retrieval still uses the real source-document RRF pipeline.

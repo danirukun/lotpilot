@@ -61,3 +61,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "The agent hit a snag. Try again." }, { status: 500 });
   }
 }
+
+export const maxDuration = 60;

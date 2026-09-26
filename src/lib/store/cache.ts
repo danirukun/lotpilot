@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import type { StoreProfile } from "@/lib/store/types";
 
-export const STORE_CACHE_VERSION = 2;
+export const STORE_CACHE_VERSION = 3;
 
 /** Default 24h — enough for a demo day without serving stale storefront DNA forever. */
 export const DEFAULT_TTL_MS = Number(process.env.STORE_CACHE_TTL_MS ?? 24 * 60 * 60 * 1000);
@@ -89,6 +89,7 @@ export async function readStoreCache(key: string): Promise<StoreProfile | null> 
 }
 
 export async function writeStoreCache(key: string, profile: StoreProfile, ttlMs = DEFAULT_TTL_MS): Promise<StoreProfile> {
+  if (profile.fetch.mode === "offline") return profile;
   const cachedAt = new Date().toISOString();
   const clean: StoreProfile = {
     ...profile,

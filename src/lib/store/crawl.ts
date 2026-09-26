@@ -1,4 +1,4 @@
-import { fetchText } from "./fetcher";
+import { fetchText, isStorePage } from "./fetcher";
 import { parsePage, type ParsedPage } from "./html";
 
 export interface CrawledPage { url: string; page: ParsedPage }
@@ -22,7 +22,7 @@ export async function readStorePages(url: URL, first: ParsedPage): Promise<Crawl
     .sort((a, b) => b.priority - a.priority).slice(0, 4);
   const extra = await Promise.all(candidates.map(async target => {
     const html = await fetchText(target.url, 5000);
-    return html ? { url: target.url, page: parsePage(html, url.hostname) } : null;
+    return html && isStorePage(html) ? { url: target.url, page: parsePage(html, url.hostname) } : null;
   }));
   return [{ url: url.toString(), page: first }, ...extra.filter((p): p is CrawledPage => p !== null)];
 }

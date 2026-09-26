@@ -9,7 +9,7 @@ export function StoreProfileCard({ store }: { store: StoreProfile }) {
         <img src={store.seo.ogImage} alt="" className="h-20 w-24 shrink-0 rounded-xl border border-ink-line object-cover" />
       )}
       <div className="min-w-0 flex-1">
-    <span className="label-eyebrow">Store profile · {store.fetch.mode === "live" ? "Public pages" : "Unavailable"}</span>
+    <span className="label-eyebrow">Store profile · {store.fetch.mode === "live" ? "Public pages" : store.fetch.mode === "reader" ? "Public pages via reader" : "Unavailable"}</span>
     <h3 className="font-display text-xl">{store.name}</h3>
     <a className="text-sm text-brand-300 hover:underline" href={store.url} target="_blank" rel="noopener noreferrer">{store.domain} ↗</a>
     <p className="text-sm text-paper/70">{store.vertical.label} · {store.businessRole === "market-event" ? "Market / event" : "Storefront"} · Size {store.size.bucket} (estimate)</p>

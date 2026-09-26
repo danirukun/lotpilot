@@ -3,7 +3,7 @@ import { cleanCategories, readShopifyCatalog } from "@/lib/store/catalog";
 import { deriveElectronicsCategories } from "@/lib/catalog";
 import { classifyVertical, deriveDna, estimateSize, isFashion, VERTICAL_LABEL, type Corpus } from "@/lib/store/classify";
 import { readStoreCache, storeCacheKey, writeStoreCache } from "@/lib/store/cache";
-import { fetchText, normalizeUrl } from "@/lib/store/fetcher";
+import { fetchStorePage, normalizeUrl } from "@/lib/store/fetcher";
 import { parsePage, type ParsedPage } from "@/lib/store/html";
 import { findMapsListing, listingFromJsonLd, mapsAvailable } from "@/lib/store/maps";
 import { researchAvailable, researchStore } from "@/lib/store/research";
@@ -89,10 +89,11 @@ async function analyseStorefront(url: URL): Promise<StoreProfile> {
   let catalog: CatalogData = EMPTY_CATALOG;
 
   // Read current public evidence; failures never substitute a saved store.
-  const html = await fetchText(url.toString());
-  if (html) {
-    mode = "live";
-    parsed = parsePage(html, domain);
+  const response = await fetchStorePage(url.toString());
+  if (response) {
+    mode = response.mode;
+    if (mode === "reader") notes.push("Read public storefront HTML via Jina Reader after the direct fetch failed. The reader may serve recently cached content; stock availability remains unverified.");
+    parsed = parsePage(response.html, domain);
     pages = await readStorePages(url, parsed);
     notes.push(`Read ${pages.length} public storefront pages.`);
   } else {

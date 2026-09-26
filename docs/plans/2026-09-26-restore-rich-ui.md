@@ -11,3 +11,5 @@ User-approved scope: recover parts of the original interface, particularly penta
 - Push and deploy the correction under the user's existing publication authorization. Resume the demo recording after UI verification.
 
 Validation: typecheck and lint passed; existing grounding suite 23/23. Chrome DevTools verified live ATIKA retrieval with three evidence charts, grid/list switching and persisted preference, valid SVG paths, and narrow layout without horizontal overflow. Source text remains cited, stock/price/ROI/reliability remain unverified. Corrected chart label clipping found during visual inspection.
+
+Follow-up: evidence availability axes use binary presence (100 present, 0 absent) so the radar fill is visible. Absent stock evidence remains labelled unverified; this is not a zero stock quantity or a quality score. Quantitative price, ROI and reliability remain unknown.

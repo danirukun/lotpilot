@@ -19,3 +19,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not read that store. Try again." }, { status: 500 });
   }
 }
+
+export const maxDuration = 60;

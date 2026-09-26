@@ -7,11 +7,11 @@ export function SupplierLeadCard({ lead, rank, layout = "grid" }: {
   lead: WholesaleLead; rank: number; layout?: "grid" | "list";
 }) {
   const axes: RadarAxis[] = [
-    { label: "Source", value: lead.sourceUrl ? 100 : null, displayValue: lead.sourceUrl ? "Linked" : "—" },
-    { label: "Fetched", value: lead.retrievedAt ? 100 : null, displayValue: lead.retrievedAt ? "Dated" : "—" },
-    { label: "Text", value: lead.evidence?.keywordRank != null ? 100 : null, displayValue: lead.evidence?.keywordRank != null ? "Found" : "—" },
-    { label: "Fuzzy", value: lead.evidence?.fuzzyRank != null ? 100 : null, displayValue: lead.evidence?.fuzzyRank != null ? "Found" : "—" },
-    { label: "Stock", value: null }
+    { label: "Source", value: lead.sourceUrl ? 100 : 0, displayValue: lead.sourceUrl ? "Linked" : "—" },
+    { label: "Fetched", value: lead.retrievedAt ? 100 : 0, displayValue: lead.retrievedAt ? "Dated" : "—" },
+    { label: "Text", value: lead.evidence?.keywordRank != null ? 100 : 0, displayValue: lead.evidence?.keywordRank != null ? "Found" : "—" },
+    { label: "Fuzzy", value: lead.evidence?.fuzzyRank != null ? 100 : 0, displayValue: lead.evidence?.fuzzyRank != null ? "Found" : "—" },
+    { label: "Stock", value: 0, displayValue: "—" }
   ];
   return <article className={`card animate-fade-up overflow-hidden ${rank === 0 ? "ring-1 ring-brand-500/40" : ""}`}>
     <div className="flex items-center justify-between border-b border-ink-line bg-gradient-to-r from-brand-500/15 via-ink-soft to-ink px-4 py-3">
@@ -35,7 +35,7 @@ export function SupplierLeadCard({ lead, rank, layout = "grid" }: {
       </div>
       <figure className="mx-auto mt-3 w-[200px] max-w-full text-paper">
         <div className="h-[176px]"><RadarChart axes={axes} /></div>
-        <figcaption className="text-center text-[10px] text-paper/50">Evidence availability · — means unverified<br />Indicators show presence, not quality scores.</figcaption>
+        <figcaption className="text-center text-[10px] text-paper/50">Evidence availability · — means unverified<br />Fill shows available evidence, not quality scores.</figcaption>
       </figure>
       <div className="mt-4 grid grid-cols-3 gap-2 border-t border-ink-line pt-3 text-xs sm:col-span-2">
         {["Lot price", "ROI", "Reliability"].map(label => <div key={label}><span className="block text-[10px] uppercase tracking-wide text-paper/45">{label}</span><span className="mt-1 block text-paper/65">Not verified</span></div>)}
