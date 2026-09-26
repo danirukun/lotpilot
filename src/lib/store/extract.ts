@@ -4,6 +4,7 @@ import { classifyVertical, deriveDna, estimateSize, isFashion, VERTICAL_LABEL, t
 import { fetchText, normalizeUrl } from "@/lib/store/fetcher";
 import { parsePage, type ParsedPage } from "@/lib/store/html";
 import { findMapsListing, listingFromJsonLd, mapsAvailable } from "@/lib/store/maps";
+import { researchAvailable, researchStore } from "@/lib/store/research";
 import type { CatalogData, MapsListing, StoreProfile, StoreSignal } from "@/lib/store/types";
 
 const EMPTY_CATALOG: CatalogData = { categories: [], productTerms: [], productCountCapped: false };
@@ -57,7 +58,7 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
       mode = "live";
       parsed = parsePage(html, domain);
     } else {
-      notes.push("Could not fetch the landing page. Profile uses the store name only.");
+      notes.push("Could not fetch the landing page. Profile uses the store name and web research only.");
     }
   }
 
@@ -76,17 +77,36 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
     catalog = { ...catalog, categories: nav, collectionCount: nav.length || undefined };
   }
 
-  let maps: MapsListing | null = null;
+  // Fixtures skip web research so the demo stays deterministic.
+  const useResearch = !fixture && researchAvailable();
+  const [placesListing, research] = await Promise.all([
+    mapsAvailable() ? findMapsListing([name, locality].filter(Boolean).join(" ")) : Promise.resolve(null),
+    useResearch ? researchStore(name, domain, locality, Boolean(parsed)) : Promise.resolve(null)
+  ]);
+
+  let maps: MapsListing | null = placesListing;
   if (mapsAvailable()) {
-    maps = await findMapsListing([name, locality].filter(Boolean).join(" "));
     notes.push(maps ? "Matched a Google Maps listing via the Places API." : "No Google Maps listing matched.");
   }
   if (!maps && fixture?.maps) maps = fixture.maps;
+  if (!maps && research?.listing) {
+    maps = research.listing;
+    notes.push("Built the location listing from web research snippets (Tavily). Check it before you rely on it.");
+  }
   if (!maps) {
     maps = listingFromJsonLd(parsed?.business ?? null, name);
     if (maps) notes.push("Used the store's own structured data (JSON-LD) for the location listing.");
   }
-  if (!maps && !mapsAvailable() && !fixture) notes.push("Set GOOGLE_MAPS_API_KEY to look up the Google Maps listing.");
+  if (useResearch) {
+    notes.push(research ? `Web research (Tavily) found ${research.sources.length} sources.` : "Web research (Tavily) returned nothing.");
+  }
+  if (!maps && !mapsAvailable() && !fixture) {
+    notes.push(
+      researchAvailable()
+        ? "No location listing found. Set GOOGLE_MAPS_API_KEY for a direct Google Maps lookup."
+        : "Set GOOGLE_MAPS_API_KEY or TAVILY_API_KEY to look up the Google Maps listing."
+    );
+  }
 
   const seo = parsed?.seo ?? { keywords: [], jsonLdTypes: [] };
   const corpus: Corpus = {
@@ -96,11 +116,12 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
       .join(" "),
     categories: catalog.categories.join(" · "),
     catalog: catalog.productTerms.join(" "),
-    mapsTypes: maps?.types ?? []
+    mapsTypes: maps?.types ?? [],
+    research: research?.text
   };
 
   const vertical = classifyVertical(corpus);
-  const locations = parsed?.business?.locations ?? 1;
+  const locations = Math.min(10, Math.max(parsed?.business?.locations ?? 1, research?.locations ?? 0));
   const size = estimateSize(catalog, maps, locations);
   const place = maps?.locality ?? locality;
   const fashionFit = isFashion(vertical.primary) || vertical.primary === "general";
@@ -134,6 +155,15 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
               .join(" · ")
           }
         ]
+      : []),
+    ...(research
+      ? [
+          {
+            source: "research" as const,
+            label: "Web research",
+            value: research.answer ?? `${research.sources.length} sources found`
+          }
+        ]
       : [])
   ];
 
@@ -145,7 +175,7 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
     seo,
     catalog: { ...catalog, productTerms: catalog.productTerms.slice(0, 40) },
     maps,
-    research: null,
+    research: research ? { answer: research.answer, sources: research.sources } : null,
     vertical: { ...vertical, label: VERTICAL_LABEL[vertical.primary] },
     size,
     fashionFit,
