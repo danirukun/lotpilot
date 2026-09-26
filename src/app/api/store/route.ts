@@ -13,7 +13,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    return NextResponse.json(await extractStoreProfile(url));
+    const refresh = body?.refresh === true;
+    return NextResponse.json(await extractStoreProfile(url, { refresh }));
   } catch {
     return NextResponse.json({ error: "Could not read that store. Try again." }, { status: 500 });
   }

@@ -2,6 +2,7 @@ import { findFixture } from "@/data/storeFixtures";
 import { cleanCategories, fromShopifyFeeds, readShopifyCatalog } from "@/lib/store/catalog";
 import { deriveElectronicsCategories } from "@/lib/catalog";
 import { classifyVertical, deriveDna, estimateSize, isFashion, VERTICAL_LABEL, type Corpus } from "@/lib/store/classify";
+import { readStoreCache, storeCacheKey, writeStoreCache } from "@/lib/store/cache";
 import { fetchText, normalizeUrl } from "@/lib/store/fetcher";
 import { parsePage, type ParsedPage } from "@/lib/store/html";
 import { findMapsListing, listingFromJsonLd, mapsAvailable } from "@/lib/store/maps";
@@ -60,10 +61,24 @@ export function resolveStoreName(parsed: ParsedPage | null, domain: string): str
 
 const normToken = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
-export async function extractStoreProfile(input: string): Promise<StoreProfile> {
+export async function extractStoreProfile(
+  input: string,
+  opts: { refresh?: boolean } = {}
+): Promise<StoreProfile> {
   const url = normalizeUrl(input);
   if (!url) throw new Error("Enter a public store URL, e.g. neonrewind.co.uk");
 
+  const key = storeCacheKey(url);
+  if (!opts.refresh) {
+    const cached = await readStoreCache(key);
+    if (cached) return cached;
+  }
+
+  const profile = await analyseStorefront(url);
+  return writeStoreCache(key, profile);
+}
+
+async function analyseStorefront(url: URL): Promise<StoreProfile> {
   const domain = url.hostname.replace(/^www\./, "");
   const origin = url.origin;
   const notes: string[] = [];
@@ -129,7 +144,9 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
     if (maps) notes.push("Used the store's own structured data (JSON-LD) for the location listing.");
   }
   if (useResearch) {
-    notes.push(research ? `Web research (Tavily) found ${research.sources.length} sources.` : "Web research (Tavily) returned nothing.");
+    notes.push(
+      research ? `Web research (Tavily) found ${research.sources.length} sources.` : "Web research (Tavily) returned nothing."
+    );
   }
   if (!maps && !mapsAvailable() && mode !== "fixture") {
     notes.push(
@@ -172,7 +189,15 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
       brands: techBrands.filter((b) => blob.includes(b.toLowerCase())).slice(0, 6)
     };
   }
-  const brief = composeBrief(name, place, VERTICAL_LABEL[vertical.primary], size.label, catalog.categories, dnaDraft.aesthetics, size.suggestedBudget);
+  const brief = composeBrief(
+    name,
+    place,
+    VERTICAL_LABEL[vertical.primary],
+    size.label,
+    catalog.categories,
+    dnaDraft.aesthetics,
+    size.suggestedBudget
+  );
   const dna = { ...dnaDraft, brief };
 
   const signals: StoreSignal[] = [
@@ -188,7 +213,13 @@ export async function extractStoreProfile(input: string): Promise<StoreProfile> 
       ? [{ source: "categories" as const, label: "Categories", value: catalog.categories.slice(0, 8).join(", ") }]
       : []),
     ...(catalog.productCount
-      ? [{ source: "catalog" as const, label: "Products", value: `${catalog.productCount}${catalog.productCountCapped ? "+" : ""}` }]
+      ? [
+          {
+            source: "catalog" as const,
+            label: "Products",
+            value: `${catalog.productCount}${catalog.productCountCapped ? "+" : ""}`
+          }
+        ]
       : []),
     ...(maps
       ? [

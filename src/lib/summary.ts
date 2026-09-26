@@ -54,7 +54,7 @@ export function buildSummary(
     );
   } else if (plan.exploratory) {
     lines.push(
-      "No fashion lot clears policy for this store type. The catalog is secondhand clothing — treat any matches as weak."
+      "No fashion lot clears policy for this store type. The catalog is secondhand clothing. Treat any matches as weak."
     );
   } else {
     lines.push("No lot clears your policy yet. Loosen a rule in the policy panel and re-run.");

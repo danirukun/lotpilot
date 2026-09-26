@@ -10,6 +10,7 @@ import { selectCandidates } from "@/lib/rfq/rank";
 import { resolveRfq } from "@/lib/rfq/resolve";
 import { resolveCatalog } from "@/lib/catalog";
 import { extractStoreProfile } from "@/lib/store/extract";
+import { researchWholesale } from "@/lib/wholesale/research";
 import type { StoreProfile } from "@/lib/store/types";
 import type { AgentResult, LotCatalog, StoreDNA } from "@/lib/types";
 
@@ -23,25 +24,32 @@ export const DEFAULT_BUDGET = 2000;
 export async function runAgent(
   brief: string,
   policyInput?: unknown,
-  opts: { rfq?: unknown; personaId?: unknown } = {}
+  opts: { rfq?: unknown; personaId?: unknown; refresh?: boolean } = {}
 ): Promise<AgentResult> {
   return runAgentFromDna(parseBrief(brief), policyInput, undefined, {
     rfq: opts.rfq,
-    personaId: resolvePersonaId(brief, opts.personaId)
+    personaId: resolvePersonaId(brief, opts.personaId),
+    refresh: opts.refresh
   });
 }
 
 /** Read a store URL, then buy for the extracted DNA with the size-based budget. */
-export async function runAgentForStore(storeUrl: string, policyInput?: unknown): Promise<AgentResult> {
-  const store = await extractStoreProfile(storeUrl);
-  return runAgentFromDna({ ...store.dna, budget: store.size.suggestedBudget }, policyInput, store);
+export async function runAgentForStore(
+  storeUrl: string,
+  policyInput?: unknown,
+  opts: { refresh?: boolean } = {}
+): Promise<AgentResult> {
+  const store = await extractStoreProfile(storeUrl, { refresh: opts.refresh });
+  return runAgentFromDna({ ...store.dna, budget: store.size.suggestedBudget }, policyInput, store, {
+    refresh: opts.refresh
+  });
 }
 
 export async function runAgentFromDna(
   dna: StoreDNA,
   policyInput?: unknown,
   store?: StoreProfile,
-  opts: { rfq?: unknown; personaId?: string } = {}
+  opts: { rfq?: unknown; personaId?: string; refresh?: boolean } = {}
 ): Promise<AgentResult> {
   const policy = sanitizePolicy(policyInput);
   const rfq = await resolveRfq(dna, {
@@ -62,6 +70,7 @@ export async function runAgentFromDna(
       : {})
   });
   const matches = rankProcured(candidates).slice(0, 6);
+  const wholesale = await researchWholesale(dna, store, { refresh: opts.refresh });
 
   const base = {
     dna,
@@ -69,6 +78,7 @@ export async function runAgentFromDna(
     matches,
     plan,
     policy,
+    wholesale,
     ...(opts.personaId ? { personaId: opts.personaId } : {}),
     ...(store ? { store } : {})
   };
