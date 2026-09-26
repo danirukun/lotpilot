@@ -70,9 +70,9 @@ export function parseBrief(brief: string): StoreDNA {
     CATEGORY_KEYWORDS[cat].some((kw) => text.includes(kw))
   );
 
-  const brands = BRAND_DICTIONARY.filter((b) =>
-    text.includes(b.toLowerCase().replace(/[^a-z0-9 ]/g, ""))
-  );
+  const bare = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+  const bareText = bare(text);
+  const brands = BRAND_DICTIONARY.filter((b) => bareText.includes(bare(b)));
 
   const decades: string[] = [];
   for (const d of ["1970s", "1980s", "1990s", "2000s", "2010s"]) {
